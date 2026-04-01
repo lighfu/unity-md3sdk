@@ -1,0 +1,1795 @@
+/* ═══════════════════════════════════════════════════════════
+ *  MD3 Components — Layout & Shape Styles
+ *  Colors are set dynamically via C# (hover/press/disabled)
+ * ═══════════════════════════════════════════════════════════ */
+
+/* ── Button ── */
+
+.md3-button {
+    height: 40px;
+    border-radius: 20px;
+    padding-left: 24px;
+    padding-right: 24px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    font-size: 14px;
+    border-width: 0;
+    overflow: hidden;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    cursor: link;
+    transition-property: background-color, border-color;
+    transition-duration: 100ms, 100ms;
+    transition-timing-function: ease-in-out, ease-in-out;
+}
+
+.md3-button--outlined {
+    border-width: 1px;
+}
+
+.md3-button--text {
+    padding-left: 12px;
+    padding-right: 12px;
+}
+
+.md3-button--small {
+    height: 32px;
+    border-radius: 16px;
+    padding-left: 16px;
+    padding-right: 16px;
+}
+
+.md3-button--small .md3-button__label {
+    font-size: 12px;
+}
+
+.md3-button--small .md3-button__icon {
+    font-size: 16px;
+    margin-right: 6px;
+}
+
+.md3-button--large {
+    height: 48px;
+    border-radius: 24px;
+    padding-left: 32px;
+    padding-right: 32px;
+}
+
+.md3-button--large .md3-button__label {
+    font-size: 16px;
+}
+
+.md3-button--large .md3-button__icon {
+    font-size: 20px;
+    margin-right: 10px;
+}
+
+.md3-button__content {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+}
+
+.md3-button__icon {
+    font-size: 18px;
+    -unity-text-align: middle-center;
+    margin-right: 8px;
+}
+
+.md3-button__label {
+    -unity-font-style: bold;
+    font-size: 14px;
+    -unity-text-align: middle-center;
+    white-space: nowrap;
+}
+
+/* ── Chip ── */
+
+.md3-chip {
+    height: 32px;
+    border-radius: 8px;
+    padding-left: 16px;
+    padding-right: 16px;
+    font-size: 13px;
+    border-width: 1px;
+    overflow: hidden;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    cursor: link;
+    transition-property: background-color, border-color;
+    transition-duration: 100ms, 100ms;
+    transition-timing-function: ease-in-out, ease-in-out;
+}
+
+.md3-chip__label {
+    font-size: 13px;
+    -unity-text-align: middle-center;
+    white-space: nowrap;
+}
+
+.md3-chip__close {
+    width: 18px;
+    height: 18px;
+    margin-left: 4px;
+    font-size: 14px;
+    -unity-text-align: middle-center;
+    cursor: link;
+    border-radius: 9px;
+}
+
+/* ── Switch ── */
+
+.md3-switch {
+    width: 52px;
+    height: 32px;
+    border-radius: 16px;
+    border-width: 2px;
+    flex-shrink: 0;
+    cursor: link;
+    overflow: hidden;
+    transition-property: background-color, border-color;
+    transition-duration: 150ms, 150ms;
+    transition-timing-function: ease-in-out, ease-in-out;
+}
+
+.md3-switch__thumb {
+    width: 16px;
+    height: 16px;
+    border-radius: 9999px;
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+
+/* ── TextField ── */
+
+.md3-textfield {
+    height: auto;
+    min-height: 56px;
+    flex-shrink: 0;
+    overflow: visible;
+}
+
+.md3-textfield--multiline {
+    min-height: 112px;
+}
+
+.md3-textfield--multiline .md3-textfield__container {
+    min-height: 96px;
+    align-items: flex-start;
+}
+
+.md3-textfield--multiline .md3-textfield__input {
+    flex-grow: 1;
+    white-space: normal;
+}
+
+.md3-textfield--multiline .md3-textfield__input > .unity-text-field__input {
+    white-space: normal;
+    flex-grow: 1;
+}
+
+.md3-textfield__container {
+    flex-grow: 1;
+    flex-direction: row;
+    align-items: center;
+    border-radius: 4px;
+    border-width: 1px;
+    padding-left: 16px;
+    padding-right: 16px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    transition-property: border-color;
+    transition-duration: 200ms;
+    transition-timing-function: ease-in-out;
+}
+
+.md3-textfield__container--outlined {
+    border-radius: 4px;
+    border-width: 1px;
+}
+
+.md3-textfield__container--filled {
+    border-radius: 4px 4px 0 0;
+    border-width: 0;
+    border-bottom-width: 1px;
+}
+
+.md3-textfield__label {
+    position: absolute;
+    font-size: 16px;
+    top: 16px;
+    left: 16px;
+    padding-left: 4px;
+    padding-right: 4px;
+    transition-property: font-size, top, left, color, background-color;
+    transition-duration: 200ms, 200ms, 200ms, 200ms, 200ms;
+    transition-timing-function: ease-in-out, ease-in-out, ease-in-out, ease-in-out, ease-in-out;
+}
+
+.md3-textfield__label--float {
+    font-size: 12px;
+    top: -8px;
+    left: 12px;
+}
+
+.md3-textfield__input {
+    flex-grow: 1;
+    border-width: 0;
+    background-color: rgba(0, 0, 0, 0);
+    font-size: 16px;
+    margin: 0;
+    padding: 0;
+    margin-top: 10px;
+}
+
+.md3-textfield__input > .unity-text-field__input {
+    border-width: 0;
+    background-color: rgba(0, 0, 0, 0);
+    font-size: 16px;
+    margin: 0;
+    padding: 0;
+}
+
+.md3-textfield__leading-icon {
+    font-size: 20px;
+    -unity-text-align: middle-center;
+    width: 24px;
+    flex-shrink: 0;
+    margin-right: 8px;
+}
+
+.md3-textfield__trailing-icon {
+    font-size: 20px;
+    -unity-text-align: middle-center;
+    width: 24px;
+    flex-shrink: 0;
+    margin-left: 8px;
+    cursor: link;
+}
+
+.md3-textfield__helper {
+    font-size: 12px;
+    margin-top: 4px;
+    margin-left: 16px;
+}
+
+.md3-textfield__counter {
+    font-size: 12px;
+    margin-top: 4px;
+    margin-right: 16px;
+    -unity-text-align: middle-right;
+    align-self: flex-end;
+}
+
+/* ── NumberField ── */
+
+.md3-numberfield {
+    height: auto;
+    min-height: 56px;
+    flex-shrink: 0;
+    overflow: visible;
+}
+
+.md3-numberfield__container {
+    flex-grow: 1;
+    flex-direction: row;
+    align-items: center;
+    border-radius: 4px;
+    border-width: 1px;
+    padding-left: 4px;
+    padding-right: 4px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    transition-property: border-color;
+    transition-duration: 200ms;
+    transition-timing-function: ease-in-out;
+}
+
+.md3-numberfield__label {
+    position: absolute;
+    font-size: 12px;
+    top: -8px;
+    left: 12px;
+    padding-left: 4px;
+    padding-right: 4px;
+}
+
+.md3-numberfield__input {
+    flex-grow: 1;
+    border-width: 0;
+    background-color: rgba(0, 0, 0, 0);
+    font-size: 16px;
+    margin: 0;
+    padding: 0;
+    -unity-text-align: middle-center;
+}
+
+.md3-numberfield__input > .unity-text-field__input {
+    border-width: 0;
+    background-color: rgba(0, 0, 0, 0);
+    font-size: 16px;
+    margin: 0;
+    padding: 0;
+    -unity-text-align: middle-center;
+}
+
+.md3-numberfield__step-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 9999px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    cursor: link;
+    transition-property: background-color;
+    transition-duration: 100ms;
+    transition-timing-function: ease-in-out;
+}
+
+.md3-numberfield__step-btn--hover {
+    background-color: rgba(128, 128, 128, 0.08);
+}
+
+/* ── Card ── */
+
+.md3-card {
+    border-radius: 12px;
+    padding: 16px;
+    flex-shrink: 0;
+    overflow: hidden;
+    transition-property: background-color;
+    transition-duration: 100ms;
+    transition-timing-function: ease-in-out;
+}
+
+.md3-card--elevated {
+    border-width: 0;
+}
+
+.md3-card--filled {
+    border-width: 0;
+}
+
+.md3-card--outlined {
+    border-width: 1px;
+}
+
+.md3-card--clickable {
+    cursor: link;
+}
+
+.md3-card__title {
+    font-size: 16px;
+    -unity-font-style: bold;
+    margin-bottom: 8px;
+}
+
+.md3-card__body {
+    font-size: 14px;
+}
+
+/* ── Badge ── */
+
+.md3-badge {
+    border-radius: 9999px;
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    -unity-text-align: middle-center;
+    -unity-font-style: bold;
+    font-size: 10px;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.md3-badge--dot {
+    width: 8px;
+    height: 8px;
+    min-width: 8px;
+    min-height: 8px;
+}
+
+.md3-badge--label {
+    min-width: 16px;
+    height: 16px;
+    padding-left: 4px;
+    padding-right: 4px;
+    border-radius: 8px;
+}
+
+/* ── Ripple ── */
+
+.md3-ripple {
+    position: absolute;
+    border-radius: 9999px;
+    opacity: 0.12;
+}
+
+.md3-ripple--fade {
+    opacity: 0;
+}
+
+/* ── Checkbox ── */
+
+.md3-checkbox {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    cursor: link;
+}
+
+.md3-checkbox__box {
+    width: 18px;
+    height: 18px;
+    border-radius: 2px;
+    border-width: 2px;
+    align-items: center;
+    justify-content: center;
+    transition-property: background-color, border-color;
+    transition-duration: 100ms, 100ms;
+    transition-timing-function: ease-in-out, ease-in-out;
+}
+
+.md3-checkbox__label {
+    font-size: 14px;
+    -unity-text-align: middle-left;
+    margin-left: 8px;
+}
+
+.md3-checkbox__check {
+    font-size: 14px;
+    -unity-text-align: middle-center;
+    transform-origin: center;
+}
+
+/* ── Radio ── */
+
+.md3-radio {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    cursor: link;
+}
+
+.md3-radio__ring {
+    width: 20px;
+    height: 20px;
+    border-radius: 9999px;
+    border-width: 2px;
+    align-items: center;
+    justify-content: center;
+    transition-property: border-color;
+    transition-duration: 100ms;
+    transition-timing-function: ease-in-out;
+}
+
+.md3-radio__label {
+    font-size: 14px;
+    -unity-text-align: middle-left;
+    margin-left: 8px;
+}
+
+.md3-radio__dot {
+    width: 0;
+    height: 0;
+    border-radius: 9999px;
+    transition-property: width, height;
+    transition-duration: 150ms, 150ms;
+    transition-timing-function: ease-in-out, ease-in-out;
+}
+
+.md3-radio--selected .md3-radio__dot {
+    width: 10px;
+    height: 10px;
+}
+
+/* ── Slider ── */
+
+.md3-slider {
+    height: 40px;
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+    cursor: link;
+}
+
+.md3-slider__track {
+    height: 4px;
+    border-radius: 2px;
+    flex-grow: 1;
+    overflow: hidden;
+}
+
+.md3-slider__fill {
+    height: 4px;
+    border-radius: 2px;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+
+.md3-slider__thumb {
+    width: 20px;
+    height: 20px;
+    border-radius: 9999px;
+    position: absolute;
+    top: 10px;
+    transition-property: background-color;
+    transition-duration: 100ms;
+    transition-timing-function: ease-in-out;
+}
+
+.md3-slider__tick {
+    width: 4px;
+    height: 4px;
+    border-radius: 2px;
+    position: absolute;
+    top: 18px;
+}
+
+.md3-slider__popup {
+    position: absolute;
+    top: -36px;
+    width: 28px;
+    height: 28px;
+    border-radius: 14px 14px 0 14px;
+    rotate: 45deg;
+    align-items: center;
+    justify-content: center;
+}
+
+.md3-slider__popup-label {
+    rotate: -45deg;
+    font-size: 10px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+}
+
+/* ── IconButton ── */
+
+.md3-icon-button {
+    width: 40px;
+    height: 40px;
+    border-radius: 9999px;
+    border-width: 0;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    cursor: link;
+    transition-property: background-color, border-color;
+    transition-duration: 100ms, 100ms;
+    transition-timing-function: ease-in-out, ease-in-out;
+}
+
+.md3-icon-button--outlined {
+    border-width: 1px;
+}
+
+.md3-icon-button--small {
+    width: 32px;
+    height: 32px;
+}
+
+.md3-icon-button--small .md3-icon-button__icon {
+    font-size: 18px;
+}
+
+.md3-icon-button--large {
+    width: 48px;
+    height: 48px;
+}
+
+.md3-icon-button--large .md3-icon-button__icon {
+    font-size: 28px;
+}
+
+.md3-icon-button__icon {
+    font-size: 24px;
+    -unity-text-align: middle-center;
+}
+
+/* ── Divider ── */
+
+.md3-divider {
+    height: 1px;
+    flex-shrink: 0;
+}
+
+/* ── Foldout ── */
+
+.md3-foldout {
+    flex-shrink: 0;
+}
+
+.md3-foldout__header {
+    height: 48px;
+    flex-direction: row;
+    align-items: center;
+    padding-left: 16px;
+    padding-right: 16px;
+    cursor: link;
+    transition-property: background-color;
+    transition-duration: 100ms;
+    transition-timing-function: ease-in-out;
+}
+
+.md3-foldout__label {
+    flex-grow: 1;
+    font-size: 14px;
+    -unity-text-align: middle-left;
+}
+
+.md3-foldout__chevron {
+    width: 24px;
+    height: 24px;
+    font-size: 20px;
+    flex-shrink: 0;
+    -unity-text-align: middle-center;
+}
+
+.md3-foldout__content-wrapper {
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.md3-foldout__content {
+    padding-left: 16px;
+    padding-right: 16px;
+}
+
+.md3-foldout__divider {
+    height: 1px;
+    flex-shrink: 0;
+}
+
+/* ── Text (Typography) ── */
+
+.md3-text {
+    flex-shrink: 0;
+}
+
+.md3-text__label {
+    -unity-text-align: middle-left;
+    white-space: normal;
+}
+
+/* ── SectionLabel ── */
+
+.md3-section-label {
+    margin-top: 16px;
+    margin-bottom: 8px;
+    flex-shrink: 0;
+}
+
+.md3-section-label__text {
+    font-size: 14px;
+    -unity-font-style: bold;
+}
+
+/* ── Spinner ── */
+
+.md3-spinner {
+    align-self: center;
+    flex-shrink: 0;
+}
+
+/* ── Tab ── */
+
+.md3-tab {
+    height: 48px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding-left: 16px;
+    padding-right: 16px;
+    flex-shrink: 0;
+    cursor: link;
+    overflow: hidden;
+    transition-property: background-color;
+    transition-duration: 100ms;
+    transition-timing-function: ease-in-out;
+}
+
+.md3-tab__label {
+    font-size: 14px;
+    -unity-text-align: middle-center;
+    white-space: nowrap;
+}
+
+.md3-tab__indicator {
+    height: 3px;
+    border-radius: 3px 3px 0 0;
+    align-self: stretch;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+}
+
+.md3-tab-bar {
+    flex-direction: row;
+    flex-shrink: 0;
+    border-bottom-width: 1px;
+    position: relative;
+}
+
+.md3-tab-bar__indicator {
+    height: 3px;
+    border-radius: 3px 3px 0 0;
+    position: absolute;
+    bottom: 0;
+}
+
+/* ── SegmentedButton ── */
+
+.md3-segmented {
+    height: 40px;
+    flex-direction: row;
+    flex-shrink: 0;
+    border-width: 1px;
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+.md3-segmented__item {
+    flex-grow: 1;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    padding-left: 12px;
+    padding-right: 12px;
+    cursor: link;
+    overflow: hidden;
+    transition-property: background-color;
+    transition-duration: 100ms;
+    transition-timing-function: ease-in-out;
+}
+
+.md3-segmented__check {
+    font-size: 14px;
+    -unity-text-align: middle-center;
+    margin-right: 4px;
+}
+
+.md3-segmented__label {
+    font-size: 14px;
+    -unity-text-align: middle-center;
+    white-space: nowrap;
+}
+
+.md3-segmented__divider {
+    width: 1px;
+    align-self: stretch;
+}
+
+/* ── ListItem ── */
+
+.md3-list-item {
+    min-height: 72px;
+    flex-direction: row;
+    align-items: center;
+    padding-left: 16px;
+    padding-right: 16px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    flex-shrink: 0;
+    cursor: link;
+    overflow: hidden;
+    transition-property: background-color;
+    transition-duration: 100ms;
+    transition-timing-function: ease-in-out;
+}
+
+.md3-list-item__avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 9999px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    margin-right: 16px;
+    overflow: hidden;
+}
+
+.md3-list-item__avatar-text {
+    font-size: 16px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+}
+
+.md3-list-item__body {
+    flex-grow: 1;
+    flex-shrink: 1;
+    min-width: 0;
+    flex-direction: column;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.md3-list-item__headline {
+    font-size: 16px;
+    -unity-font-style: bold;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.md3-list-item__supporting {
+    font-size: 14px;
+    margin-top: 2px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.md3-list-item__trailing {
+    font-size: 14px;
+    flex-shrink: 0;
+    margin-left: 16px;
+    -unity-text-align: middle-right;
+}
+
+/* ── Snackbar ── */
+
+.md3-snackbar {
+    height: 48px;
+    flex-direction: row;
+    align-items: center;
+    border-radius: 4px;
+    padding-left: 16px;
+    padding-right: 8px;
+    position: absolute;
+    bottom: 16px;
+    left: 16px;
+    right: 16px;
+    flex-shrink: 0;
+}
+
+.md3-snackbar__message {
+    flex-grow: 1;
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+.md3-snackbar__action {
+    font-size: 14px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    padding-left: 8px;
+    padding-right: 8px;
+    height: 36px;
+    border-radius: 18px;
+    border-width: 0;
+    cursor: link;
+    flex-shrink: 0;
+    transition-property: background-color;
+    transition-duration: 100ms;
+    transition-timing-function: ease-in-out;
+}
+
+/* ── Tooltip ── */
+
+.md3-tooltip {
+    position: absolute;
+    border-radius: 4px;
+    padding-left: 8px;
+    padding-right: 8px;
+    height: 24px;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.md3-tooltip__text {
+    font-size: 12px;
+    -unity-text-align: middle-center;
+    white-space: nowrap;
+}
+
+.md3-tooltip--rich {
+    height: auto;
+    min-width: 200px;
+    max-width: 320px;
+    padding: 12px;
+    border-radius: 12px;
+    flex-direction: column;
+}
+
+.md3-tooltip__title {
+    font-size: 14px;
+    -unity-font-style: bold;
+    margin-bottom: 4px;
+}
+
+.md3-tooltip__description {
+    font-size: 12px;
+    white-space: normal;
+    margin-bottom: 8px;
+}
+
+.md3-tooltip__action-label {
+    font-size: 12px;
+    -unity-font-style: bold;
+    align-self: flex-end;
+    cursor: link;
+}
+
+/* ── Dialog ── */
+
+.md3-dialog__scrim {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.md3-dialog__card {
+    border-radius: 28px;
+    padding: 24px;
+    min-width: 280px;
+    max-width: 560px;
+    position: absolute;
+    align-self: center;
+}
+
+.md3-dialog__title {
+    font-size: 24px;
+    -unity-font-style: bold;
+    margin-bottom: 16px;
+}
+
+.md3-dialog__message {
+    font-size: 14px;
+    white-space: normal;
+    margin-bottom: 24px;
+}
+
+.md3-dialog__content {
+    margin-bottom: 24px;
+}
+
+.md3-dialog__actions {
+    flex-direction: row;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+/* ── MenuItem ── */
+
+.md3-menu-item {
+    height: 48px;
+    flex-direction: row;
+    align-items: center;
+    padding-left: 16px;
+    padding-right: 16px;
+    flex-shrink: 0;
+    cursor: link;
+    overflow: hidden;
+    transition-property: background-color;
+    transition-duration: 100ms;
+    transition-timing-function: ease-in-out;
+}
+
+.md3-menu-item__label {
+    flex-grow: 1;
+    font-size: 14px;
+    -unity-text-align: middle-left;
+}
+
+.md3-menu-item__shortcut {
+    font-size: 12px;
+    -unity-text-align: middle-right;
+    flex-shrink: 0;
+    margin-left: 16px;
+}
+
+/* ── DialogRadio ── */
+
+.md3-dialog-radio {
+    height: 48px;
+    flex-direction: row;
+    align-items: center;
+    padding-left: 16px;
+    padding-right: 16px;
+    flex-shrink: 0;
+    cursor: link;
+    overflow: hidden;
+    transition-property: background-color;
+    transition-duration: 100ms;
+    transition-timing-function: ease-in-out;
+}
+
+.md3-dialog-radio__label {
+    font-size: 14px;
+    -unity-text-align: middle-left;
+    flex-grow: 1;
+    margin-left: 16px;
+}
+
+/* ── NavBar ── */
+
+.md3-nav-bar {
+    position: relative;
+}
+
+/* ── NavBarItem ── */
+
+.md3-nav-bar-item {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    flex-grow: 1;
+    min-width: 48px;
+    height: 64px;
+    cursor: link;
+    overflow: hidden;
+}
+
+.md3-nav-bar-item__pill {
+    width: 64px;
+    height: 32px;
+    border-radius: 16px;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    transition-property: background-color;
+    transition-duration: 100ms;
+    transition-timing-function: ease-in-out;
+}
+
+.md3-nav-bar-item__icon {
+    font-size: 20px;
+    -unity-text-align: middle-center;
+}
+
+.md3-nav-bar-item__label {
+    font-size: 12px;
+    -unity-text-align: middle-center;
+    white-space: nowrap;
+    margin-top: 2px;
+}
+
+/* ── NavRail ── */
+
+.md3-nav-rail {
+    position: relative;
+}
+
+/* ── NavRailItem ── */
+
+.md3-nav-rail-item {
+    flex-direction: column;
+    align-items: center;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    min-height: 56px;
+    cursor: link;
+    overflow: hidden;
+}
+
+.md3-nav-rail-item__pill {
+    width: 56px;
+    height: 32px;
+    border-radius: 16px;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    transition-property: background-color;
+    transition-duration: 100ms;
+    transition-timing-function: ease-in-out;
+}
+
+.md3-nav-rail-item__icon {
+    font-size: 18px;
+    -unity-text-align: middle-center;
+}
+
+.md3-nav-rail-item__label {
+    font-size: 11px;
+    -unity-text-align: middle-center;
+    white-space: nowrap;
+    margin-top: 2px;
+}
+
+/* ── NavDrawer ── */
+
+.md3-nav-drawer {
+    position: relative;
+}
+
+/* ── NavDrawerItem ── */
+
+.md3-nav-drawer-item {
+    height: 56px;
+    flex-direction: row;
+    align-items: center;
+    padding-left: 16px;
+    padding-right: 16px;
+    border-radius: 28px;
+    flex-shrink: 0;
+    cursor: link;
+    overflow: hidden;
+    transition-property: background-color;
+    transition-duration: 100ms;
+    transition-timing-function: ease-in-out;
+}
+
+.md3-nav-drawer-item__icon {
+    width: 28px;
+    font-size: 20px;
+    -unity-text-align: middle-center;
+    flex-shrink: 0;
+}
+
+.md3-nav-drawer-item__label {
+    font-size: 14px;
+    -unity-text-align: middle-left;
+    flex-grow: 1;
+    margin-left: 12px;
+}
+
+.md3-nav-drawer-item__badge {
+    font-size: 12px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-right;
+    flex-shrink: 0;
+    margin-left: 12px;
+    min-width: 24px;
+}
+
+/* ── SplitButton ── */
+
+.md3-split-button {
+    height: 40px;
+    flex-direction: row;
+    flex-shrink: 0;
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+.md3-split-button__main {
+    flex-grow: 1;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    padding-left: 24px;
+    padding-right: 12px;
+    cursor: link;
+    overflow: hidden;
+    transition-property: background-color;
+    transition-duration: 100ms;
+    transition-timing-function: ease-in-out;
+}
+
+.md3-split-button__main-label {
+    font-size: 14px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    white-space: nowrap;
+}
+
+.md3-split-button__divider {
+    width: 1px;
+    align-self: stretch;
+    margin-top: 8px;
+    margin-bottom: 8px;
+}
+
+.md3-split-button__dropdown {
+    width: 40px;
+    align-items: center;
+    justify-content: center;
+    cursor: link;
+    overflow: hidden;
+    transition-property: background-color;
+    transition-duration: 100ms;
+    transition-timing-function: ease-in-out;
+}
+
+.md3-split-button__dropdown-icon {
+    font-size: 14px;
+    -unity-text-align: middle-center;
+}
+
+/* ── LinearProgress ── */
+
+/* NOTE: border-radius must be <= half of height.
+ * Unity UI Toolkit renders artifacts with 9999px on thin elements. */
+.md3-linear-progress {
+    height: 4px;
+    border-radius: 2px;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.md3-linear-progress__fill {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+}
+
+/* ── CircularProgress ── */
+
+.md3-circular-progress {
+    align-self: center;
+    flex-shrink: 0;
+}
+
+/* ── TopAppBar ── */
+
+.md3-top-app-bar {
+    height: 64px;
+    flex-direction: row;
+    align-items: center;
+    padding-left: 4px;
+    padding-right: 8px;
+    flex-shrink: 0;
+}
+
+.md3-top-app-bar__nav {
+    width: 48px;
+    height: 48px;
+    border-radius: 9999px;
+    align-items: center;
+    justify-content: center;
+    cursor: link;
+    flex-shrink: 0;
+    overflow: hidden;
+    transition-property: background-color;
+    transition-duration: 100ms;
+    transition-timing-function: ease-in-out;
+}
+
+.md3-top-app-bar__nav-icon {
+    font-size: 20px;
+    -unity-text-align: middle-center;
+}
+
+.md3-top-app-bar__title {
+    font-size: 22px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-left;
+    flex-grow: 1;
+    margin-left: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+}
+
+.md3-top-app-bar__actions {
+    flex-direction: row;
+    flex-shrink: 0;
+    align-items: center;
+}
+
+/* ── FAB ── */
+
+.md3-fab {
+    height: 56px;
+    border-radius: 16px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    padding-left: 16px;
+    padding-right: 16px;
+    flex-shrink: 0;
+    cursor: link;
+    overflow: hidden;
+    transition-property: background-color;
+    transition-duration: 100ms;
+    transition-timing-function: ease-in-out;
+}
+
+.md3-fab--small {
+    height: 40px;
+    border-radius: 12px;
+    padding-left: 8px;
+    padding-right: 8px;
+}
+
+.md3-fab--large {
+    height: 96px;
+    border-radius: 28px;
+    padding-left: 30px;
+    padding-right: 30px;
+}
+
+.md3-fab__icon {
+    font-size: 24px;
+    -unity-text-align: middle-center;
+}
+
+.md3-fab--large .md3-fab__icon {
+    font-size: 36px;
+}
+
+.md3-fab__label {
+    font-size: 14px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    margin-left: 12px;
+    white-space: nowrap;
+}
+
+.md3-fab--floating {
+    position: absolute;
+}
+
+.md3-fab-speed-dial {
+    position: absolute;
+    flex-direction: column-reverse;
+    align-items: flex-end;
+}
+
+.md3-fab-speed-dial__item {
+    flex-direction: row;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.md3-fab-speed-dial__label {
+    font-size: 14px;
+    border-radius: 4px;
+    padding: 4px 8px;
+    margin-right: 8px;
+    white-space: nowrap;
+}
+
+.md3-fab-speed-dial__scrim {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+/* ── Dropdown ── */
+
+.md3-dropdown {
+    height: 56px;
+    flex-shrink: 0;
+    overflow: visible;
+}
+
+.md3-dropdown__field {
+    flex-grow: 1;
+    height: 56px;
+    border-radius: 4px;
+    border-width: 1px;
+    flex-direction: row;
+    align-items: center;
+    padding-left: 16px;
+    padding-right: 12px;
+    cursor: link;
+    transition-property: border-color;
+    transition-duration: 200ms;
+    transition-timing-function: ease-in-out;
+}
+
+.md3-dropdown__label {
+    position: absolute;
+    font-size: 12px;
+    top: -8px;
+    left: 12px;
+    padding-left: 4px;
+    padding-right: 4px;
+}
+
+.md3-dropdown__value {
+    font-size: 16px;
+    flex-grow: 1;
+    -unity-text-align: middle-left;
+}
+
+.md3-dropdown__arrow {
+    font-size: 14px;
+    -unity-text-align: middle-center;
+    width: 24px;
+    flex-shrink: 0;
+    transition-property: rotate;
+    transition-duration: 150ms;
+    transition-timing-function: ease-in-out;
+}
+
+.md3-dropdown__menu {
+    position: absolute;
+    top: 58px;
+    left: 0;
+    right: 0;
+    border-radius: 4px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    overflow: hidden;
+}
+
+/* ── Avatar ── */
+
+.md3-avatar {
+    border-radius: 9999px;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.md3-avatar__text {
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+}
+
+/* ── Banner ── */
+
+.md3-banner {
+    flex-direction: row;
+    align-items: flex-start;
+    padding: 16px;
+    flex-shrink: 0;
+    border-bottom-width: 1px;
+}
+
+.md3-banner__icon {
+    width: 24px;
+    font-size: 20px;
+    -unity-text-align: upper-center;
+    flex-shrink: 0;
+    margin-right: 16px;
+}
+
+.md3-banner__body {
+    flex-grow: 1;
+    flex-direction: column;
+}
+
+.md3-banner__message {
+    font-size: 14px;
+    white-space: normal;
+    margin-bottom: 12px;
+}
+
+.md3-banner__actions {
+    flex-direction: row;
+    justify-content: flex-end;
+}
+
+/* ── EmptyState ── */
+
+.md3-empty-state {
+    align-items: center;
+    justify-content: center;
+    padding: 32px;
+    flex-shrink: 0;
+}
+
+.md3-empty-state__icon {
+    font-size: 48px;
+    -unity-text-align: middle-center;
+    margin-bottom: 16px;
+}
+
+.md3-empty-state__title {
+    font-size: 22px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    margin-bottom: 8px;
+}
+
+.md3-empty-state__description {
+    font-size: 14px;
+    -unity-text-align: middle-center;
+    white-space: normal;
+    max-width: 320px;
+}
+
+/* ── Skeleton ── */
+
+.md3-skeleton {
+    border-radius: 4px;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.md3-skeleton--circle {
+    border-radius: 9999px;
+}
+
+.md3-skeleton__shimmer {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 60%;
+}
+
+/* ── Tag ── */
+
+.md3-tag {
+    height: 24px;
+    border-radius: 12px;
+    padding-left: 10px;
+    padding-right: 10px;
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.md3-tag__label {
+    font-size: 12px;
+    -unity-font-style: bold;
+    -unity-text-align: middle-center;
+    white-space: nowrap;
+}
+
+/* ── Loading ── */
+
+.md3-loading {
+    align-self: center;
+    flex-shrink: 0;
+}
+
+/* ── Stepper ── */
+
+.md3-stepper {
+    flex-direction: row;
+    align-items: flex-start;
+    flex-shrink: 0;
+}
+
+.md3-stepper__step {
+    flex-direction: column;
+    align-items: center;
+    min-width: 48px;
+}
+
+.md3-stepper__circle {
+    width: 32px;
+    height: 32px;
+    border-radius: 9999px;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.md3-stepper__connector {
+    height: 2px;
+    flex-grow: 1;
+    margin-top: 15px;
+    margin-left: 4px;
+    margin-right: 4px;
+    flex-shrink: 0;
+}
+
+.md3-stepper__label {
+    font-size: 12px;
+    margin-top: 4px;
+    white-space: nowrap;
+    -unity-text-align: upper-center;
+}
+
+/* ── SearchBar ── */
+
+.md3-search-bar {
+    flex-shrink: 0;
+    overflow: visible;
+}
+
+.md3-search-bar__container {
+    height: 48px;
+    border-radius: 24px;
+    flex-direction: row;
+    align-items: center;
+    padding-left: 16px;
+    padding-right: 12px;
+    overflow: hidden;
+}
+
+.md3-search-bar__icon {
+    font-size: 20px;
+    -unity-text-align: middle-center;
+    width: 24px;
+    flex-shrink: 0;
+    margin-right: 8px;
+}
+
+.md3-search-bar__input {
+    flex-grow: 1;
+    border-width: 0;
+    background-color: rgba(0, 0, 0, 0);
+    font-size: 16px;
+    margin: 0;
+    padding: 0;
+}
+
+.md3-search-bar__input > .unity-text-field__input {
+    border-width: 0;
+    background-color: rgba(0, 0, 0, 0);
+    font-size: 16px;
+    margin: 0;
+    padding: 0;
+}
+
+.md3-search-bar__clear {
+    font-size: 16px;
+    -unity-text-align: middle-center;
+    width: 24px;
+    height: 24px;
+    border-radius: 9999px;
+    flex-shrink: 0;
+    cursor: link;
+}
+
+.md3-search-bar__dropdown {
+    border-radius: 0 0 16px 16px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    overflow: hidden;
+}
+
+/* ── BottomSheet ── */
+
+.md3-bottom-sheet__scrim {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.md3-bottom-sheet__sheet {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    border-top-left-radius: 28px;
+    border-top-right-radius: 28px;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    padding-top: 8px;
+    padding-bottom: 16px;
+    padding-left: 16px;
+    padding-right: 16px;
+    flex-direction: column;
+}
+
+.md3-bottom-sheet__handle {
+    width: 32px;
+    height: 4px;
+    border-radius: 2px;
+    align-self: center;
+    margin-bottom: 8px;
+    flex-shrink: 0;
+}
+
+.md3-bottom-sheet__title {
+    font-size: 18px;
+    -unity-font-style: bold;
+    margin-bottom: 12px;
+    padding-left: 8px;
+}
+
+.md3-bottom-sheet__content {
+    flex-grow: 1;
+}
+
+/* ── ContextMenu ── */
+
+.md3-context-menu {
+    position: absolute;
+    min-width: 200px;
+    max-width: 320px;
+    border-radius: 4px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    overflow: hidden;
+}
+
+/* ── SideSheet ── */
+
+.md3-side-sheet__scrim {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+.md3-side-sheet__sheet {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 360px;
+    border-top-left-radius: 28px;
+    border-bottom-left-radius: 28px;
+    border-top-right-radius: 0;
+    border-bottom-right-radius: 0;
+    padding: 24px;
+    flex-direction: column;
+}
+
+.md3-side-sheet__header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-shrink: 0;
+}
+
+.md3-side-sheet__title {
+    font-size: 24px;
+    -unity-font-style: bold;
+    flex-grow: 1;
+}
+
+.md3-side-sheet__close {
+    font-size: 20px;
+    cursor: link;
+    padding: 4px;
+    border-radius: 9999px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+}
+
+.md3-side-sheet__content {
+    flex-grow: 1;
+}
+
+/* ── FullScreenDialog ── */
+
+.md3-fullscreen-dialog {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.md3-fullscreen-dialog__top-bar {
+    height: 64px;
+    flex-direction: row;
+    align-items: center;
+    padding-left: 8px;
+    padding-right: 16px;
+    flex-shrink: 0;
+    border-bottom-width: 1px;
+}
+
+.md3-fullscreen-dialog__close {
+    font-size: 20px;
+    cursor: link;
+    padding: 8px;
+    border-radius: 9999px;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+}
+
+.md3-fullscreen-dialog__title {
+    font-size: 22px;
+    -unity-font-style: bold;
+    flex-grow: 1;
+    margin-left: 16px;
+}
+
+.md3-fullscreen-dialog__content {
+    flex-grow: 1;
+    padding: 24px;
+}

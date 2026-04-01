@@ -1,0 +1,116 @@
+/* MD3 Theme — Base styles for themed root elements */
+/* Colors are applied inline by MD3Theme.ApplyTo() */
+/* Components resolve theme via md3-dark/md3-light class detection */
+
+.md3-dark,
+.md3-light {
+    flex-grow: 1;
+}
+
+/* ── Material Design 3 Scrollbar ── */
+
+/* Vertical scroller */
+.md3-dark .unity-scroller--vertical,
+.md3-light .unity-scroller--vertical {
+    width: 8px;
+    margin-left: 2px;
+    margin-right: 2px;
+    border-left-width: 0;
+}
+
+/* Horizontal scroller */
+.md3-dark .unity-scroller--horizontal,
+.md3-light .unity-scroller--horizontal {
+    height: 8px;
+    margin-top: 2px;
+    margin-bottom: 2px;
+    border-top-width: 0;
+}
+
+/* Hide arrow buttons */
+.md3-dark .unity-scroller .unity-repeat-button,
+.md3-light .unity-scroller .unity-repeat-button {
+    display: none;
+}
+
+/* Slider track — invisible */
+.md3-dark .unity-scroller .unity-base-slider__tracker,
+.md3-light .unity-scroller .unity-base-slider__tracker {
+    background-color: rgba(0, 0, 0, 0);
+    border-width: 0;
+}
+
+/* Thumb (dragger) — thin, rounded, semi-transparent */
+.md3-dark .unity-scroller--vertical .unity-base-slider__dragger {
+    width: 4px;
+    margin-left: 2px;
+    border-radius: 4px;
+    background-color: rgba(202, 196, 208, 0.5);
+    border-width: 0;
+    min-height: 20px;
+    transition-property: width, background-color, margin-left;
+    transition-duration: 150ms, 150ms, 150ms;
+    transition-timing-function: ease-in-out, ease-in-out, ease-in-out;
+}
+
+.md3-light .unity-scroller--vertical .unity-base-slider__dragger {
+    width: 4px;
+    margin-left: 2px;
+    border-radius: 4px;
+    background-color: rgba(73, 69, 79, 0.4);
+    border-width: 0;
+    min-height: 20px;
+    transition-property: width, background-color, margin-left;
+    transition-duration: 150ms, 150ms, 150ms;
+    transition-timing-function: ease-in-out, ease-in-out, ease-in-out;
+}
+
+/* Hover: wider + more opaque */
+.md3-dark .unity-scroller--vertical:hover .unity-base-slider__dragger {
+    width: 6px;
+    margin-left: 1px;
+    background-color: rgba(202, 196, 208, 0.7);
+}
+
+.md3-light .unity-scroller--vertical:hover .unity-base-slider__dragger {
+    width: 6px;
+    margin-left: 1px;
+    background-color: rgba(73, 69, 79, 0.6);
+}
+
+/* Horizontal thumb */
+.md3-dark .unity-scroller--horizontal .unity-base-slider__dragger {
+    height: 4px;
+    margin-top: 2px;
+    border-radius: 4px;
+    background-color: rgba(202, 196, 208, 0.5);
+    border-width: 0;
+    min-width: 20px;
+    transition-property: height, background-color, margin-top;
+    transition-duration: 150ms, 150ms, 150ms;
+    transition-timing-function: ease-in-out, ease-in-out, ease-in-out;
+}
+
+.md3-light .unity-scroller--horizontal .unity-base-slider__dragger {
+    height: 4px;
+    margin-top: 2px;
+    border-radius: 4px;
+    background-color: rgba(73, 69, 79, 0.4);
+    border-width: 0;
+    min-width: 20px;
+    transition-property: height, background-color, margin-top;
+    transition-duration: 150ms, 150ms, 150ms;
+    transition-timing-function: ease-in-out, ease-in-out, ease-in-out;
+}
+
+.md3-dark .unity-scroller--horizontal:hover .unity-base-slider__dragger {
+    height: 6px;
+    margin-top: 1px;
+    background-color: rgba(202, 196, 208, 0.7);
+}
+
+.md3-light .unity-scroller--horizontal:hover .unity-base-slider__dragger {
+    height: 6px;
+    margin-top: 1px;
+    background-color: rgba(73, 69, 79, 0.6);
+}
