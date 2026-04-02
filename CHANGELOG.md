@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.1] - 2026-04-02
+
+### Changed
+- VPM distribution switched from compiled DLL to source code
+- Version display in Settings window now shows correct version
+
 ## [0.7.0] - 2026-04-02
 
 ### Added
@@ -23,4 +29,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Sample window demonstrating all components (`Window > 紫陽花広場 > MD3 Toolkit Sample`)
 - Settings window for font and language configuration (`Window > 紫陽花広場 > MD3 SDK Settings`)
 
+[0.7.1]: https://github.com/lighfu/unity-md3sdk/releases/tag/v0.7.1
 [0.7.0]: https://github.com/lighfu/unity-md3sdk/releases/tag/v0.7.0
