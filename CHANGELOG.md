@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- Domain reload 直後のストリーミング描画で `UIRStylePainter.DrawTextInfo` NRE / テキスト歯抜けが発生する race を修正
+  - `MD3FontAutoSetup` に `AssemblyReloadEvents.afterAssemblyReload` ハンドラを追加し、consumer の `EditorWindow.OnEnable` より前に font cache をクリア
+  - `MD3Theme.LoadFontAsset` で生成直後の FontAsset に対しても `IsFontAssetBroken` チェックを行い、broken なら cache せず `FontDefinition.FromFont` フォールバックに委ねる
+  - `MD3Theme` に `s_refreshRetryScheduled` パターンを導入し、AssetDatabase 準備中の場合は次の editor tick で `RefreshAllWindows` を自動リトライ
+
 ## [0.7.1] - 2026-04-02
 
 ### Changed

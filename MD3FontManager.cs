@@ -24,8 +24,20 @@ namespace AjisaiFlow.MD3SDK.Editor
     {
         static MD3FontAutoSetup()
         {
+            // afterAssemblyReload: consumer の EditorWindow.OnEnable より前に発火するため、
+            // 半壊した FontAsset 参照を先にクリアして race window の起点を塞ぐ。
+            // AssetDatabase が準備中の可能性があるので、ここでは asset 読み込みを伴う
+            // RefreshAllWindows は呼ばず、cache クリアのみに留める（delayCall 側に委ねる）。
+            AssemblyReloadEvents.afterAssemblyReload += OnAfterAssemblyReload;
+
             // EditorApplication.delayCall で AssetDatabase 準備完了後に実行
             EditorApplication.delayCall += CheckAndDownload;
+        }
+
+        static void OnAfterAssemblyReload()
+        {
+            MD3Theme.ClearFontCache();
+            MD3Icon.ClearCache();
         }
 
         static void CheckAndDownload()

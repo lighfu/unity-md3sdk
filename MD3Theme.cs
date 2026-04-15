@@ -208,6 +208,24 @@ namespace AjisaiFlow.MD3SDK.Editor
             s_font = null;
         }
 
+        static bool s_refreshRetryScheduled;
+
+        /// <summary>
+        /// FontAsset の生成に失敗した場合 (AssetDatabase 準備中・atlas 半壊など) に
+        /// 1 回だけ遅延リトライを登録する。次の editor tick で RefreshAllWindows を実行し、
+        /// 全ウィンドウに fresh な FontAsset を再割り当てする。
+        /// </summary>
+        static void ScheduleRefreshRetry()
+        {
+            if (s_refreshRetryScheduled) return;
+            s_refreshRetryScheduled = true;
+            EditorApplication.delayCall += () =>
+            {
+                s_refreshRetryScheduled = false;
+                MD3FontManager.RefreshAllWindows();
+            };
+        }
+
         /// <summary>
         /// FontAsset をロードして返す (RefreshAllWindows から使用)。
         /// キャッシュがクリアされていれば新規生成される。
@@ -224,10 +242,32 @@ namespace AjisaiFlow.MD3SDK.Editor
             if (s_fontAsset != null) return s_fontAsset;
 
             var baseFont = LoadFont();
-            if (baseFont == null) return null;
+            if (baseFont == null)
+            {
+                // AssetDatabase 準備中の可能性 — 遅延リトライで自動回復
+                ScheduleRefreshRetry();
+                return null;
+            }
 
-            s_fontAsset = FontAsset.CreateFontAsset(baseFont);
-            if (s_fontAsset == null) return null;
+            var fa = FontAsset.CreateFontAsset(baseFont);
+            if (fa == null)
+            {
+                ScheduleRefreshRetry();
+                return null;
+            }
+
+            // 生成直後でも atlasTexture が null/破棄済みの場合がある
+            // (ドメインリロード直後の AssetDatabase 半準備状態など)。
+            // そのまま UI に渡すと UIRStylePainter.DrawTextInfo で NRE になるので
+            // cache せず遅延リトライに委ねる。呼び出し側 (ApplyTo) は
+            // FontDefinition.FromFont フォールバックに落ちる。
+            if (IsFontAssetBroken(fa))
+            {
+                ScheduleRefreshRetry();
+                return null;
+            }
+
+            s_fontAsset = fa;
             MD3Icon.ProtectFontAsset(s_fontAsset);
             s_fontAsset.fallbackFontAssetTable = new List<FontAsset>();
 
@@ -236,11 +276,11 @@ namespace AjisaiFlow.MD3SDK.Editor
             var activePrefix = MD3FontManager.ActiveFontPrefix;
             foreach (var fallbackFont in MD3FontManager.LoadAllFallbackFonts(activePrefix))
             {
-                var fa = FontAsset.CreateFontAsset(fallbackFont);
-                if (fa != null)
+                var fallbackFa = FontAsset.CreateFontAsset(fallbackFont);
+                if (fallbackFa != null)
                 {
-                    MD3Icon.ProtectFontAsset(fa);
-                    s_fontAsset.fallbackFontAssetTable.Add(fa);
+                    MD3Icon.ProtectFontAsset(fallbackFa);
+                    s_fontAsset.fallbackFontAssetTable.Add(fallbackFa);
                 }
             }
 
