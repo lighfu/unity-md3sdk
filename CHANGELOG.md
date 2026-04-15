@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.7.2] - 2026-04-16
 
 ### Fixed
 - Domain reload 直後のストリーミング描画で `UIRStylePainter.DrawTextInfo` NRE / テキスト歯抜けが発生する race を修正
