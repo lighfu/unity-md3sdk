@@ -9,7 +9,7 @@ namespace AjisaiFlow.MD3SDK.Editor
 {
     public class MD3SDKSettingsWindow : EditorWindow
     {
-        const string Version = "0.8.0";
+        const string Version = "0.8.1";
 
         MD3Theme _theme;
         VisualElement _iconContainer;
