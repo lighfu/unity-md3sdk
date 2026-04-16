@@ -17,8 +17,11 @@ namespace AjisaiFlow.MD3SDK.Editor
         Body,
         BodySmall,
         LabelLarge,
-        LabelCaption,
+        LabelMedium,
+        LabelSmall,
         LabelAnnotation,
+        [System.Obsolete("Use LabelSmall instead")]
+        LabelCaption,
     }
 
     public class MD3Text : VisualElement, IMD3Themeable
@@ -117,7 +120,13 @@ namespace AjisaiFlow.MD3SDK.Editor
                 case MD3TextStyle.LabelLarge:
                     _label.style.fontSize = 13;
                     break;
+                case MD3TextStyle.LabelMedium:
+                    _label.style.fontSize = 12;
+                    break;
+                case MD3TextStyle.LabelSmall:
+#pragma warning disable CS0618
                 case MD3TextStyle.LabelCaption:
+#pragma warning restore CS0618
                     _label.style.fontSize = 11;
                     break;
                 case MD3TextStyle.LabelAnnotation:
@@ -139,7 +148,11 @@ namespace AjisaiFlow.MD3SDK.Editor
 
             switch (_textStyle)
             {
+                case MD3TextStyle.LabelMedium:
+                case MD3TextStyle.LabelSmall:
+#pragma warning disable CS0618
                 case MD3TextStyle.LabelCaption:
+#pragma warning restore CS0618
                 case MD3TextStyle.LabelAnnotation:
                     _label.style.color = _theme.OnSurfaceVariant;
                     break;
@@ -165,7 +178,11 @@ namespace AjisaiFlow.MD3SDK.Editor
                 case MD3TextStyle.Body:             return "md3-text--body";
                 case MD3TextStyle.BodySmall:        return "md3-text--body-small";
                 case MD3TextStyle.LabelLarge:       return "md3-text--label-large";
-                case MD3TextStyle.LabelCaption:     return "md3-text--label-caption";
+                case MD3TextStyle.LabelMedium:      return "md3-text--label-medium";
+                case MD3TextStyle.LabelSmall:       return "md3-text--label-small";
+#pragma warning disable CS0618
+                case MD3TextStyle.LabelCaption:     return "md3-text--label-small";
+#pragma warning restore CS0618
                 case MD3TextStyle.LabelAnnotation:  return "md3-text--label-annotation";
                 default:                            return "md3-text--body";
             }

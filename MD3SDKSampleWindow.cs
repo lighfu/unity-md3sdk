@@ -393,7 +393,8 @@ namespace AjisaiFlow.MD3SDK.Editor
                 ("Body", MD3TextStyle.Body),
                 ("Body Small", MD3TextStyle.BodySmall),
                 ("Label Large", MD3TextStyle.LabelLarge),
-                ("Label Caption", MD3TextStyle.LabelCaption),
+                ("Label Medium", MD3TextStyle.LabelMedium),
+                ("Label Small", MD3TextStyle.LabelSmall),
                 ("Label Annotation", MD3TextStyle.LabelAnnotation),
             };
             foreach (var (text, style) in styles)
@@ -1236,7 +1237,7 @@ namespace AjisaiFlow.MD3SDK.Editor
             img3.style.backgroundColor = _theme.SurfaceContainerHighest;
             _themeCallbacks.Add(t => img3.style.backgroundColor = t.SurfaceContainerHighest);
             imgRow.Add(img3);
-            var imgHint = new MD3Text("(Set .Texture to display)", MD3TextStyle.LabelCaption);
+            var imgHint = new MD3Text("(Set .Texture to display)", MD3TextStyle.LabelSmall);
             imgRow.Add(imgHint);
             c.Add(imgRow);
 
@@ -2363,7 +2364,7 @@ namespace AjisaiFlow.MD3SDK.Editor
             lpWave1.Radius(6);
             lpWave1.style.overflow = Overflow.Hidden;
             c.Add(lpWave1);
-            c.Add(new MD3Text("60% determinate", MD3TextStyle.LabelCaption));
+            c.Add(new MD3Text("60% determinate", MD3TextStyle.LabelSmall));
             c.Add(new MD3Spacer(MD3Spacing.M));
 
             var lpWave2 = new MD3LinearProgress(0f, true, MD3LinearProgressStyle.SineWave);
@@ -2372,7 +2373,7 @@ namespace AjisaiFlow.MD3SDK.Editor
             lpWave2.Radius(6);
             lpWave2.style.overflow = Overflow.Hidden;
             c.Add(lpWave2);
-            c.Add(new MD3Text("Indeterminate", MD3TextStyle.LabelCaption));
+            c.Add(new MD3Text("Indeterminate", MD3TextStyle.LabelSmall));
             c.Add(new MD3Spacer(MD3Spacing.M));
 
             var lpWave3 = new MD3LinearProgress(0f, true, MD3LinearProgressStyle.SineWave);
@@ -2380,7 +2381,7 @@ namespace AjisaiFlow.MD3SDK.Editor
             lpWave3.Radius(12);
             lpWave3.style.overflow = Overflow.Hidden;
             c.Add(lpWave3);
-            c.Add(new MD3Text("Tall wave (24px)", MD3TextStyle.LabelCaption));
+            c.Add(new MD3Text("Tall wave (24px)", MD3TextStyle.LabelSmall));
 
             // Track Bar
             AddSection(c, "Linear Progress — Track Bar");
@@ -2388,13 +2389,13 @@ namespace AjisaiFlow.MD3SDK.Editor
             lpTrack1.style.height = 8;
             lpTrack1.style.marginBottom = 12;
             c.Add(lpTrack1);
-            c.Add(new MD3Text("50% determinate", MD3TextStyle.LabelCaption));
+            c.Add(new MD3Text("50% determinate", MD3TextStyle.LabelSmall));
             c.Add(new MD3Spacer(MD3Spacing.S));
 
             var lpTrack2 = new MD3LinearProgress(0f, true, MD3LinearProgressStyle.TrackBar);
             lpTrack2.style.height = 8;
             c.Add(lpTrack2);
-            c.Add(new MD3Text("Indeterminate", MD3TextStyle.LabelCaption));
+            c.Add(new MD3Text("Indeterminate", MD3TextStyle.LabelSmall));
 
             // Track Wave
             AddSection(c, "Linear Progress — Track Wave");
@@ -2406,14 +2407,14 @@ namespace AjisaiFlow.MD3SDK.Editor
                 lpTw.style.height = 10;
                 lpTw.style.marginBottom = 4;
                 c.Add(lpTw);
-                c.Add(new MD3Text($"{(int)(tv * 100)}%", MD3TextStyle.LabelCaption));
+                c.Add(new MD3Text($"{(int)(tv * 100)}%", MD3TextStyle.LabelSmall));
                 c.Add(new MD3Spacer(MD3Spacing.S));
             }
 
             var lpTw2 = new MD3LinearProgress(0f, true, MD3LinearProgressStyle.TrackWave);
             lpTw2.style.height = 10;
             c.Add(lpTw2);
-            c.Add(new MD3Text("Indeterminate", MD3TextStyle.LabelCaption));
+            c.Add(new MD3Text("Indeterminate", MD3TextStyle.LabelSmall));
 
             // CircularProgress
             AddSection(c, "Circular Progress");

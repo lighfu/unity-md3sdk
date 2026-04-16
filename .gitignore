@@ -16,6 +16,10 @@
 .DS_Store
 Thumbs.db
 
+# Claude Code
+.claude/
+CLAUDE.md
+
 Fonts/*.ttf
 Fonts/*.otf
 Fonts/*.ttf.meta
