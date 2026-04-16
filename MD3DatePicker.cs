@@ -135,7 +135,7 @@ namespace AjisaiFlow.MD3SDK.Editor
 
             // Ensure theme is resolved
             if (_theme == null) _theme = ResolveTheme();
-            if (_theme == null) _theme = MD3Theme.Auto();
+            if (_theme == null) _theme = MD3Theme.Default ?? MD3Theme.Auto();
 
             // Popup
             _popup = new VisualElement();

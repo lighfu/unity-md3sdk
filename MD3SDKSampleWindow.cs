@@ -46,8 +46,8 @@ namespace AjisaiFlow.MD3SDK.Editor
             _sidebarItems.Clear();
             _currentPage = -1;
 
-            _isDark = EditorGUIUtility.isProSkin;
-            _theme = _isDark ? MD3Theme.Dark() : MD3Theme.Light();
+            _isDark = MD3Theme.Default != null ? MD3Theme.Default.IsDark : EditorGUIUtility.isProSkin;
+            _theme = MD3Theme.Default ?? (_isDark ? MD3Theme.Dark() : MD3Theme.Light());
 
             var themeSheet = MD3Theme.LoadThemeStyleSheet();
             var compSheet = MD3Theme.LoadComponentsStyleSheet();
@@ -364,7 +364,7 @@ namespace AjisaiFlow.MD3SDK.Editor
             };
             resetBtn.clicked += () =>
             {
-                _theme = _isDark ? MD3Theme.Dark() : MD3Theme.Light();
+                _theme = MD3Theme.Default ?? (_isDark ? MD3Theme.Dark() : MD3Theme.Light());
                 _theme.ApplyTo(rootVisualElement);
                 ApplyThemeColors();
             };

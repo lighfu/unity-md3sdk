@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -34,6 +35,11 @@ namespace AjisaiFlow.MD3SDK.Editor
         static MD3Theme s_light;
         static MD3Theme s_default;
         static readonly Dictionary<VisualElement, MD3Theme> s_customThemes = new();
+
+        // カスタムテーマの re-attach 復元用。ConditionalWeakTable はキーが GC されるとエントリも自動削除される。
+        static readonly ConditionalWeakTable<VisualElement, MD3Theme> s_appliedThemes = new();
+        static readonly ConditionalWeakTable<VisualElement, object> s_callbacksRegistered = new();
+        static readonly object s_sentinel = new();
 
         static Font s_font;
         static FontAsset s_fontAsset;
@@ -210,11 +216,27 @@ namespace AjisaiFlow.MD3SDK.Editor
             if (this != s_dark && this != s_light)
             {
                 s_customThemes[root] = this;
-                root.RegisterCallback<DetachFromPanelEvent>(_ => s_customThemes.Remove(root));
+
+                // re-attach 時に復元するためのバックアップ (WeakRef でリーク防止)
+                s_appliedThemes.Remove(root);
+                s_appliedThemes.Add(root, this);
+
+                // コールバックは root 1 つにつき 1 回だけ登録
+                if (!s_callbacksRegistered.TryGetValue(root, out _))
+                {
+                    s_callbacksRegistered.Add(root, s_sentinel);
+                    root.RegisterCallback<DetachFromPanelEvent>(_ => s_customThemes.Remove(root));
+                    root.RegisterCallback<AttachToPanelEvent>(_ =>
+                    {
+                        if (s_appliedThemes.TryGetValue(root, out var theme))
+                            s_customThemes[root] = theme;
+                    });
+                }
             }
             else
             {
                 s_customThemes.Remove(root);
+                s_appliedThemes.Remove(root);
             }
 
             // Set root surface colors inline (USS custom properties can't be set from C#)
