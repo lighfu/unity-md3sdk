@@ -11,8 +11,14 @@ namespace AjisaiFlow.MD3SDK.Editor
         void RefreshTheme();
     }
 
+    [InitializeOnLoad]
     public class MD3Theme
     {
+        static MD3Theme()
+        {
+            RestoreDefault();
+        }
+
         public Color Primary, OnPrimary, PrimaryContainer, OnPrimaryContainer;
         public Color Secondary, OnSecondary, SecondaryContainer, OnSecondaryContainer;
         public Color Tertiary, OnTertiary, TertiaryContainer, OnTertiaryContainer;
@@ -26,6 +32,7 @@ namespace AjisaiFlow.MD3SDK.Editor
 
         static MD3Theme s_dark;
         static MD3Theme s_light;
+        static MD3Theme s_default;
         static readonly Dictionary<VisualElement, MD3Theme> s_customThemes = new();
 
         static Font s_font;
@@ -46,7 +53,78 @@ namespace AjisaiFlow.MD3SDK.Editor
                     return current.ClassListContains("md3-dark") ? Dark() : Light();
                 current = current.parent;
             }
-            return Auto();
+            return s_default ?? Auto();
+        }
+
+        /// <summary>
+        /// SDK レベルのデフォルトテーマを設定する。
+        /// カスタムテーマが ApplyTo されていない要素は、Auto() の代わりにこのテーマを使用する。
+        /// </summary>
+        public static void SetDefault(MD3Theme theme)
+        {
+            s_default = theme;
+            if (theme != null)
+            {
+                EditorPrefs.SetString("MD3SDK_DefaultSeedColor", $"#{ColorUtility.ToHtmlStringRGBA(s_defaultSeedColor)}");
+                EditorPrefs.SetBool("MD3SDK_DefaultThemeIsDark", theme.IsDark);
+                EditorPrefs.SetBool("MD3SDK_DefaultThemeEnabled", true);
+            }
+            else
+            {
+                EditorPrefs.DeleteKey("MD3SDK_DefaultSeedColor");
+                EditorPrefs.DeleteKey("MD3SDK_DefaultThemeIsDark");
+                EditorPrefs.SetBool("MD3SDK_DefaultThemeEnabled", false);
+            }
+        }
+
+        /// <summary>
+        /// SDK レベルのデフォルトテーマをクリアし、Auto() フォールバックに戻す。
+        /// </summary>
+        public static void ClearDefault()
+        {
+            s_default = null;
+            s_defaultSeedColor = new Color(0.4f, 0.314f, 0.643f); // M3 baseline purple
+            EditorPrefs.DeleteKey("MD3SDK_DefaultSeedColor");
+            EditorPrefs.DeleteKey("MD3SDK_DefaultThemeIsDark");
+            EditorPrefs.SetBool("MD3SDK_DefaultThemeEnabled", false);
+        }
+
+        /// <summary>
+        /// 現在の SDK デフォルトテーマを返す。未設定なら null。
+        /// </summary>
+        public static MD3Theme Default => s_default;
+
+        static Color s_defaultSeedColor = new Color(0.4f, 0.314f, 0.643f);
+
+        /// <summary>デフォルトテーマのシードカラー。</summary>
+        public static Color DefaultSeedColor
+        {
+            get => s_defaultSeedColor;
+            set => s_defaultSeedColor = value;
+        }
+
+        /// <summary>
+        /// シードカラーと明暗からデフォルトテーマを生成して設定する。
+        /// </summary>
+        public static void SetDefaultFromSeed(Color seedColor, bool isDark)
+        {
+            s_defaultSeedColor = seedColor;
+            SetDefault(FromSeedColor(seedColor, isDark));
+        }
+
+        /// <summary>
+        /// EditorPrefs から保存済みデフォルトテーマを復元する。
+        /// エディタ起動時や domain reload 後に呼ばれる。
+        /// </summary>
+        public static void RestoreDefault()
+        {
+            if (!EditorPrefs.GetBool("MD3SDK_DefaultThemeEnabled", false)) return;
+            var hex = EditorPrefs.GetString("MD3SDK_DefaultSeedColor", "");
+            if (string.IsNullOrEmpty(hex)) return;
+            if (!ColorUtility.TryParseHtmlString(hex, out var seed)) return;
+            var isDark = EditorPrefs.GetBool("MD3SDK_DefaultThemeIsDark", true);
+            s_defaultSeedColor = seed;
+            s_default = FromSeedColor(seed, isDark);
         }
 
         public static MD3Theme Auto() => EditorGUIUtility.isProSkin ? Dark() : Light();

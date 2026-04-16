@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEditor;
+using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 using static AjisaiFlow.MD3SDK.Editor.MD3L10n;
@@ -14,6 +15,7 @@ namespace AjisaiFlow.MD3SDK.Editor
         VisualElement _iconContainer;
         VisualElement _fontListContainer;
         VisualElement _emojiContainer;
+        VisualElement _themePreviewContainer;
         MD3Text _statusLabel;
 
         [MenuItem("Window/紫陽花広場/MD3 SDK Settings")]
@@ -26,7 +28,7 @@ namespace AjisaiFlow.MD3SDK.Editor
 
         void CreateGUI()
         {
-            _theme = MD3Theme.Auto();
+            _theme = MD3Theme.Default ?? MD3Theme.Auto();
 
             var themeSheet = MD3Theme.LoadThemeStyleSheet();
             var compSheet = MD3Theme.LoadComponentsStyleSheet();
@@ -46,6 +48,94 @@ namespace AjisaiFlow.MD3SDK.Editor
             // ═══ バージョン ═══
             root.Add(new MD3SectionLabel("MD3 SDK"));
             root.Add(new MD3Text($"Version {Version}", MD3TextStyle.Body, _theme.OnSurfaceVariant));
+
+            root.Add(new MD3Spacer(MD3Spacing.S));
+            root.Add(new MD3Divider());
+            root.Add(new MD3Spacer(MD3Spacing.S));
+
+            // ═══ デフォルトテーマ ═══
+            root.Add(new MD3SectionLabel(M("デフォルトテーマ")));
+            {
+                var themeEnabled = MD3Theme.Default != null;
+
+                // 有効/無効トグル
+                var enableRow = new MD3Row(gap: MD3Spacing.S);
+                enableRow.style.alignItems = Align.Center;
+                enableRow.Add(new MD3Text(M("カスタムテーマを使用"), MD3TextStyle.Body));
+                enableRow.Add(new MD3Spacer());
+                var themeSwitch = new MD3Switch(themeEnabled);
+                themeSwitch.changed += v =>
+                {
+                    if (v)
+                    {
+                        MD3Theme.SetDefaultFromSeed(MD3Theme.DefaultSeedColor, EditorGUIUtility.isProSkin);
+                    }
+                    else
+                    {
+                        MD3Theme.ClearDefault();
+                    }
+                    Rebuild();
+                };
+                enableRow.Add(themeSwitch);
+                root.Add(enableRow);
+
+                if (themeEnabled)
+                {
+                    // シードカラーピッカー
+                    var colorRow = new MD3Row(gap: MD3Spacing.S);
+                    colorRow.style.alignItems = Align.Center;
+                    colorRow.Add(new MD3Text(M("シードカラー"), MD3TextStyle.Body));
+                    colorRow.Add(new MD3Spacer());
+
+                    var colorField = new UnityEditor.UIElements.ColorField();
+                    colorField.value = MD3Theme.DefaultSeedColor;
+                    colorField.showAlpha = false;
+                    colorField.style.width = 120;
+                    colorField.RegisterValueChangedCallback(evt =>
+                    {
+                        MD3Theme.SetDefaultFromSeed(evt.newValue, MD3Theme.Default.IsDark);
+                        ReapplyTheme();
+                        RefreshThemePreview();
+                    });
+                    colorRow.Add(colorField);
+                    root.Add(colorRow);
+
+                    // Dark / Light 切り替え
+                    var modeRow = new MD3Row(gap: MD3Spacing.S);
+                    modeRow.style.alignItems = Align.Center;
+                    modeRow.Add(new MD3Text(M("モード"), MD3TextStyle.Body));
+                    modeRow.Add(new MD3Spacer());
+
+                    var isDark = MD3Theme.Default.IsDark;
+                    var modeSegment = new MD3SegmentedButton(new[] { "Light", "Dark" }, isDark ? 1 : 0);
+                    modeSegment.changed += idx =>
+                    {
+                        MD3Theme.SetDefaultFromSeed(MD3Theme.DefaultSeedColor, idx == 1);
+                        ReapplyTheme();
+                        RefreshThemePreview();
+                    };
+                    modeRow.Add(modeSegment);
+                    root.Add(modeRow);
+
+                    // リセットボタン
+                    var resetRow = new MD3Row(gap: MD3Spacing.S);
+                    resetRow.style.justifyContent = Justify.FlexEnd;
+                    var resetBtn = new MD3Button(M("リセット"), MD3ButtonStyle.Text, size: MD3ButtonSize.Small);
+                    resetBtn.clicked += () =>
+                    {
+                        MD3Theme.ClearDefault();
+                        _statusLabel.Text = M("デフォルトテーマをリセットしました");
+                        Rebuild();
+                    };
+                    resetRow.Add(resetBtn);
+                    root.Add(resetRow);
+
+                    // プレビュー
+                    _themePreviewContainer = new MD3Column(gap: MD3Spacing.XS);
+                    root.Add(_themePreviewContainer);
+                    RefreshThemePreview();
+                }
+            }
 
             root.Add(new MD3Spacer(MD3Spacing.S));
             root.Add(new MD3Divider());
@@ -166,7 +256,7 @@ namespace AjisaiFlow.MD3SDK.Editor
 
         void ReapplyTheme()
         {
-            _theme = MD3Theme.Auto();
+            _theme = MD3Theme.Default ?? MD3Theme.Auto();
             _theme.ApplyTo(rootVisualElement);
         }
 
@@ -366,6 +456,64 @@ namespace AjisaiFlow.MD3SDK.Editor
             }
 
             _emojiContainer.Add(row);
+        }
+
+        void RefreshThemePreview()
+        {
+            if (_themePreviewContainer == null) return;
+            _themePreviewContainer.Clear();
+
+            var t = MD3Theme.Default;
+            if (t == null) return;
+
+            var swatches = new (string name, Color color)[]
+            {
+                ("Primary", t.Primary),
+                ("OnPrimary", t.OnPrimary),
+                ("PrimaryContainer", t.PrimaryContainer),
+                ("Secondary", t.Secondary),
+                ("Tertiary", t.Tertiary),
+                ("Surface", t.Surface),
+                ("OnSurface", t.OnSurface),
+                ("Error", t.Error),
+            };
+
+            var grid = new VisualElement();
+            grid.style.flexDirection = FlexDirection.Row;
+            grid.style.flexWrap = Wrap.Wrap;
+
+            foreach (var (name, color) in swatches)
+            {
+                var swatch = new MD3Column(gap: 2);
+                swatch.style.alignItems = Align.Center;
+                swatch.style.width = 80;
+                swatch.style.marginBottom = MD3Spacing.XS;
+
+                var box = new VisualElement();
+                box.style.width = 48;
+                box.style.height = 48;
+                box.style.backgroundColor = color;
+                box.style.borderTopLeftRadius = 12;
+                box.style.borderTopRightRadius = 12;
+                box.style.borderBottomLeftRadius = 12;
+                box.style.borderBottomRightRadius = 12;
+                box.style.borderTopWidth = 1;
+                box.style.borderBottomWidth = 1;
+                box.style.borderLeftWidth = 1;
+                box.style.borderRightWidth = 1;
+                box.style.borderTopColor = t.OutlineVariant;
+                box.style.borderBottomColor = t.OutlineVariant;
+                box.style.borderLeftColor = t.OutlineVariant;
+                box.style.borderRightColor = t.OutlineVariant;
+                swatch.Add(box);
+
+                var label = new MD3Text(name, MD3TextStyle.LabelSmall, t.OnSurfaceVariant);
+                swatch.Add(label);
+
+                grid.Add(swatch);
+            }
+
+            _themePreviewContainer.Add(grid);
         }
 
         void StartDownload(MD3FontManager.FontEntry entry)
