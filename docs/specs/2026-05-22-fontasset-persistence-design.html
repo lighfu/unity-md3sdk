@@ -264,7 +264,7 @@ Assets/MD3SDKFonts/                     <span class="tag">← 既存（DLフォ�
     <table>
       <thead><tr><th>対象</th><th>処置</th></tr></thead>
       <tbody>
-        <tr><td><code>ScheduleRefreshRetry</code> / <code>s_refreshRetryScheduled</code></td><td class="verdict no">削除 — 遅延リトライループは不要に</td></tr>
+        <tr><td><code>ScheduleRefreshRetry</code> / <code>s_refreshRetryScheduled</code></td><td>維持 — 起動時の <code>AssetDatabase</code> 未準備に備えた 1 ショットの安全網として残す（§3.6 と整合）</td></tr>
         <tr><td><code>MD3FontAutoSetup</code> の race 対策・<code>OnAfterAssemblyReload</code> のキャッシュクリア</td><td class="verdict no">削除 — ディスクアセットは生き残る</td></tr>
         <tr><td><code>ProtectFontAsset</code> の <code>HideAndDontSave</code></td><td>修正 — 永続化と矛盾するため永続 FontAsset には適用しない</td></tr>
         <tr><td><code>IsFontAssetBroken</code></td><td>縮小 — null/破棄チェックのみの<strong>軽量な安全網</strong>として維持（defense-in-depth）</td></tr>
