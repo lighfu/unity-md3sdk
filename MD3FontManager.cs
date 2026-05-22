@@ -24,28 +24,12 @@ namespace AjisaiFlow.MD3SDK.Editor
     {
         static MD3FontAutoSetup()
         {
-            // afterAssemblyReload: consumer の EditorWindow.OnEnable より前に発火するため、
-            // 半壊した FontAsset 参照を先にクリアして race window の起点を塞ぐ。
-            // AssetDatabase が準備中の可能性があるので、ここでは asset 読み込みを伴う
-            // RefreshAllWindows は呼ばず、cache クリアのみに留める（delayCall 側に委ねる）。
-            AssemblyReloadEvents.afterAssemblyReload += OnAfterAssemblyReload;
-
             // EditorApplication.delayCall で AssetDatabase 準備完了後に実行
             EditorApplication.delayCall += CheckAndDownload;
         }
 
-        static void OnAfterAssemblyReload()
-        {
-            MD3Theme.ClearFontCache();
-            MD3Icon.ClearCache();
-        }
-
         static void CheckAndDownload()
         {
-            // ドメインリロード後: FontAsset キャッシュをクリアし全ウィンドウを再描画
-            // (static フィールドはリセットされるが、UI 要素が破棄済み FontAsset を参照し続ける)
-            MD3FontManager.RefreshAllWindows();
-
             // 1. アイコンフォント (UI 表示に必須)
             if (!MD3FontManager.IsIconFontAvailable)
             {
@@ -607,9 +591,8 @@ namespace AjisaiFlow.MD3SDK.Editor
             MD3Theme.ClearFontCache();
             MD3Icon.ClearCache();
 
-            // 全 EditorWindow の rootVisualElement に対して FontAsset を再適用
-            // Repaint() だけでは UI 要素が旧(破損した) FontAsset を参照し続け、
-            // 一部の文字が透明になる問題が発生する
+            // 全 EditorWindow の rootVisualElement に新しい FontAsset を再適用する。
+            // (フォント設定変更後、新フォントを全 MD3 ウィンドウへ伝播させるため)
             var newFontAsset = MD3Theme.LoadFontAssetPublic();
             foreach (var w in Resources.FindObjectsOfTypeAll<EditorWindow>())
             {
