@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>設計書 — UnityAgent 文字歯抜けバグ 根本対策</title>
+<style>
+  :root{
+    --bg:#141318; --surface:#1d1b20; --surface-hi:#2b2930; --surface-low:#1a181e;
+    --on:#e6e1e9; --on-dim:#cac4cf; --on-faint:#948f99;
+    --primary:#d0bcff; --on-primary-c:#eaddff; --primary-c:#4f378b;
+    --tertiary:#efb8c8; --error:#f2b8b5; --good:#9ccc9c;
+    --outline:#48454e; --outline-v:#322f37;
+    --radius:16px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--bg);color:var(--on);
+    font-family:"Segoe UI",-apple-system,"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
+    line-height:1.75;-webkit-font-smoothing:antialiased;
+    padding:48px 24px 120px;
+  }
+  .wrap{max-width:900px;margin:0 auto;}
+
+  /* header */
+  header{
+    background:linear-gradient(135deg,#2b2438 0%,#1d1b20 70%);
+    border:1px solid var(--outline-v);border-radius:28px;
+    padding:40px 40px 36px;margin-bottom:32px;position:relative;overflow:hidden;
+  }
+  header::after{
+    content:"";position:absolute;right:-60px;top:-60px;width:240px;height:240px;
+    background:radial-gradient(circle,rgba(208,188,255,.18),transparent 70%);
+  }
+  .eyebrow{
+    font-size:12px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--primary);font-weight:700;margin-bottom:14px;
+  }
+  h1{font-size:30px;line-height:1.35;font-weight:700;letter-spacing:.01em;}
+  .meta{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px;}
+  .chip{
+    font-size:12.5px;padding:5px 13px;border-radius:999px;
+    background:var(--surface-hi);color:var(--on-dim);border:1px solid var(--outline);
+  }
+  .chip.accent{background:var(--primary-c);color:var(--on-primary-c);border-color:transparent;}
+
+  /* sections */
+  section{
+    background:var(--surface);border:1px solid var(--outline-v);border-radius:var(--radius);
+    padding:30px 34px;margin-bottom:20px;
+  }
+  h2{
+    font-size:20px;font-weight:700;margin-bottom:18px;
+    display:flex;align-items:center;gap:12px;
+  }
+  h2 .num{
+    flex:none;width:30px;height:30px;border-radius:9px;
+    background:var(--primary-c);color:var(--on-primary-c);
+    font-size:14px;display:grid;place-items:center;font-weight:700;
+  }
+  h3{font-size:15px;font-weight:700;color:var(--primary);margin:22px 0 10px;}
+  p{color:var(--on-dim);margin-bottom:12px;}
+  strong{color:var(--on);font-weight:700;}
+  .em-good{color:var(--good);font-weight:700;}
+  .em-bad{color:var(--error);font-weight:700;}
+  ul{list-style:none;margin:8px 0 12px;}
+  li{color:var(--on-dim);padding-left:22px;position:relative;margin-bottom:7px;}
+  li::before{content:"";position:absolute;left:4px;top:11px;width:6px;height:6px;border-radius:2px;background:var(--primary);}
+  code{
+    font-family:"Cascadia Code","Consolas","SF Mono",monospace;
+    background:var(--surface-hi);padding:2px 7px;border-radius:6px;
+    font-size:13px;color:var(--tertiary);
+  }
+  pre{
+    background:var(--surface-low);border:1px solid var(--outline-v);border-radius:12px;
+    padding:18px 20px;overflow-x:auto;margin:10px 0 14px;
+  }
+  pre code{background:none;padding:0;color:var(--on-dim);font-size:12.5px;line-height:1.7;}
+  .key{color:var(--primary);}
+
+  /* callout */
+  .callout{
+    border-left:3px solid var(--primary);background:var(--surface-hi);
+    border-radius:0 12px 12px 0;padding:14px 18px;margin:14px 0;
+    color:var(--on-dim);font-size:14px;
+  }
+  .callout.warn{border-left-color:var(--error);}
+
+  /* table */
+  table{width:100%;border-collapse:collapse;margin:6px 0 8px;font-size:13.5px;}
+  th,td{text-align:left;padding:12px 14px;vertical-align:top;border-bottom:1px solid var(--outline-v);}
+  th{color:var(--on-faint);font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;font-weight:700;}
+  td{color:var(--on-dim);}
+  tr.rec td{background:rgba(208,188,255,.07);}
+  tr.rec td:first-child{color:var(--primary);font-weight:700;}
+  .verdict{font-weight:700;white-space:nowrap;}
+  .verdict.ok{color:var(--good);}
+  .verdict.no{color:var(--error);}
+
+  /* file tree */
+  .tree{
+    background:var(--surface-low);border:1px solid var(--outline-v);border-radius:12px;
+    padding:16px 20px;font-family:"Cascadia Code","Consolas",monospace;
+    font-size:12.5px;line-height:1.95;color:var(--on-faint);
+  }
+  .tree .f{color:var(--on);}
+  .tree .new{color:var(--good);}
+  .tree .tag{color:var(--primary);font-size:11px;}
+
+  /* steps */
+  .steps{counter-reset:s;margin-top:8px;}
+  .step{
+    position:relative;padding:4px 0 16px 44px;border-left:2px solid var(--outline-v);
+    margin-left:14px;
+  }
+  .step:last-child{border-left-color:transparent;}
+  .step::before{
+    counter-increment:s;content:counter(s);
+    position:absolute;left:-15px;top:0;width:28px;height:28px;border-radius:50%;
+    background:var(--primary-c);color:var(--on-primary-c);
+    display:grid;place-items:center;font-size:13px;font-weight:700;
+  }
+  .step h4{font-size:14.5px;color:var(--on);margin-bottom:4px;}
+  .step p{font-size:13.5px;margin:0;}
+
+  /* decision box */
+  .decision{
+    background:linear-gradient(135deg,#3a2d2d 0%,#2b2024 100%);
+    border:1px solid #5c4a4a;border-radius:var(--radius);padding:26px 30px;
+  }
+  .decision h2{color:var(--tertiary);}
+  .decision h2 .num{background:#5c3d3d;color:var(--error);}
+  .qbox{display:flex;gap:14px;align-items:flex-start;margin-top:14px;}
+  .qbox .qn{
+    flex:none;width:26px;height:26px;border-radius:8px;background:var(--surface-hi);
+    color:var(--tertiary);display:grid;place-items:center;font-weight:700;font-size:13px;
+  }
+  footer{text-align:center;color:var(--on-faint);font-size:12px;margin-top:36px;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">設計書 / Design Spec</div>
+    <h1>UnityAgent 文字「歯抜け」バグ — 根本対策</h1>
+    <div class="meta">
+      <span class="chip accent">案 A: FontAsset ディスク永続化</span>
+      <span class="chip">2026-05-22</span>
+      <span class="chip">対象: unity-md3sdk + unity-agent</span>
+      <span class="chip accent">状態: 承認済み (2026-05-22)</span>
+    </div>
+  </header>
+
+  <!-- 1. 背景 -->
+  <section>
+    <h2><span class="num">1</span>背景 — 根本原因</h2>
+    <p>
+      UnityAgent のチャット画面で、文字の一部が透明化して<strong>「歯抜け」</strong>になり、
+      別の文字（"ち" など）が混入する。これは文字列処理のバグではなく、
+      <strong>UI Toolkit の動的 FontAsset の内部アトラステクスチャがドメインリロードで破棄される</strong>グリフ描画バグ。
+    </p>
+    <ul>
+      <li>チャット UI は UI Toolkit の <code>Label</code>。フォントは <code>FontAsset.CreateFontAsset()</code> による<strong>実行時生成の動的 FontAsset</strong>。</li>
+      <li>ドメインリロード（スクリプト再コンパイル）/ プレイモード遷移 / <code>AssetDatabase.Refresh</code> で、FontAsset の C# オブジェクトは生存するが、<strong>内部の <code>atlasTextures</code>（Texture2D）だけが破棄</strong>される。</li>
+      <li><code>Label</code> がこの半壊 FontAsset を参照し続け、グリフが<span class="em-bad">透明（=歯抜け、レイアウト幅は残る）</span>または別アトラスセル誤参照で<span class="em-bad">別文字混入</span>。</li>
+      <li>UnityAgent はツール実行でプロジェクトを書き換え → 再コンパイル → <strong>ストリーミング中にドメインリロード</strong>、が「たまに」起きる主因。</li>
+    </ul>
+    <div class="callout warn">
+      <strong>既存の対症療法（調査で確認済み）:</strong>
+      <code>unity-md3sdk</code> 側に <code>IsFontAssetBroken</code> / <code>ScheduleRefreshRetry</code> /
+      <code>RefreshAllWindows</code> / <code>MD3FontAutoSetup</code> が多数。
+      さらに <code>unity-agent</code> 側の <code>UnityAgentWindow.CreateGUI()</code>（250-257 行）に、
+      ドメインリロード直後の <strong>歯抜けテキスト＋<code>UIRStylePainter.DrawTextInfo</code> の NullRef クラッシュ</strong>
+      を防ぐための <code>ClearFontCache()</code> ＋ <code>RefreshAllWindows()</code> 緩和ブロックが存在。
+      いずれも <code>delayCall</code> 依存の <strong>race window</strong> が残り、
+      <code>ProtectFontAsset</code> の <code>HideAndDontSave</code> もリロードでの破棄は防げない。
+    </div>
+  </section>
+
+  <!-- 2. 方式案 -->
+  <section>
+    <h2><span class="num">2</span>方式案の比較</h2>
+    <table>
+      <thead>
+        <tr><th>案</th><th>内容</th><th>評価</th><th>判定</th></tr>
+      </thead>
+      <tbody>
+        <tr class="rec">
+          <td>A. FontAsset ディスクアセット化</td>
+          <td>FontAsset 本体・アトラステクスチャ・マテリアルを <code>.asset</code> として保存。アトラスがディスクアセットになりリロードで破棄されない。</td>
+          <td>真の根本対策。中程度の複雑さ。生成物が <code>Assets/</code> に出る。</td>
+          <td class="verdict ok">採用</td>
+        </tr>
+        <tr>
+          <td>B. 静的アトラス事前ベイク</td>
+          <td>必要グリフを全部静的アトラスへ焼く。</td>
+          <td>CJK は数万グリフ → 巨大アトラス・ディスク肥大・セットアップ激遅。</td>
+          <td class="verdict no">却下</td>
+        </tr>
+        <tr>
+          <td>C. リアクティブ再構築の強化</td>
+          <td><code>beforeAssemblyReload</code> 等で先回り再構築。</td>
+          <td>「描画前に再構築完了」を保証できず race は原理的に消えない。</td>
+          <td class="verdict no">却下</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="callout">
+      アトラスの <code>Texture2D</code> が「実行時オブジェクト」である限りリロードで必ず破棄される。
+      これを<strong>「ディスクアセット」にすることだけ</strong>が race を原理的に消す唯一の方法 → <strong>案 A を採用</strong>。
+    </div>
+  </section>
+
+  <!-- 3. 設計 -->
+  <section>
+    <h2><span class="num">3</span>設計（案 A）</h2>
+
+    <h3>3.1　新コンポーネント <code>MD3FontAssetStore</code></h3>
+    <p>責務を 1 つに絞った新ユーティリティを追加（<code>unity-md3sdk/MD3FontAssetStore.cs</code>）。</p>
+    <ul>
+      <li><code>GetOrCreate(key, baseFont, fallbackFonts)</code> → ディスク永続化された <code>FontAsset</code> を返す。
+        既に <code>.asset</code> があればロードして返す（<strong>リロード後はこの経路でアトラスが無傷のまま復帰</strong>）。
+        無ければ生成 → <code>AssetDatabase.CreateAsset</code> + <code>AddObjectToAsset</code>（アトラス・マテリアルをサブアセット化）→ 保存。</li>
+      <li><code>InvalidateAll()</code> → 生成物を削除し再生成を促す。</li>
+    </ul>
+    <p><code>MD3Theme</code> と <code>MD3Icon</code> の両方がこれを使う。<strong>アイコンフォントも同じ根本原因なので一緒に対策</strong>。</p>
+
+    <h3>3.2　データフロー</h3>
+    <pre><code>MD3Theme.LoadFontAsset()
+  └→ MD3FontAssetStore.<span class="key">GetOrCreate</span>("theme-&lt;activePrefix&gt;", baseFont, fallbacks)
+       ├─ ディスクに .asset あり → LoadAssetAtPath で返す  <span class="key">（リロード耐性あり）</span>
+       └─ なし → 生成 → CreateAsset / AddObjectToAsset で保存 → 返す
+
+MD3Icon → GetOrCreate("icon", iconFont) / GetOrCreate("icon-filled", filledFont)</code></pre>
+    <div class="callout">
+      アトラスは保存後も <code>Dynamic</code> のまま。リロード後はディスクの（中身は空でも<strong>有効な</strong>）テクスチャが復帰し、
+      グリフはオンデマンドで再ラスタライズされる。
+      <span class="em-bad">破棄テクスチャ＝歯抜け</span> が
+      <span class="em-good">有効な空テクスチャ＝即再描画</span> に変わるのが肝。
+    </div>
+
+    <h3>3.3　生成物の配置</h3>
+    <div class="tree">
+Assets/MD3SDKFonts/                     <span class="tag">← 既存（DLフォント保存先）</span>
+├─ NotoSansJP-Regular.otf
+├─ ...
+└─ <span class="new">Generated/</span>                          <span class="tag">← 新規</span>
+   ├─ <span class="new">MD3_FA_theme-NotoSansJP.asset</span>     <span class="tag">FontAsset + atlas/material をサブアセット化</span>
+   ├─ <span class="new">MD3_FA_icon.asset</span>
+   └─ <span class="new">MD3_FA_icon-filled.asset</span>
+    </div>
+    <p>MD3SDK は読み取り専用 VPM パッケージのため、生成物は既存の DL フォントと同じ <code>Assets/MD3SDKFonts/</code> 配下に置く（前例踏襲）。</p>
+
+    <h3>3.4　無効化（フォント設定変更時）</h3>
+    <p>
+      <code>ActiveFontPrefix</code> 変更・フォント DL/削除・Emoji トグル時に <code>InvalidateAll()</code> → 次回
+      <code>LoadFontAsset</code> で再生成 → <code>RefreshAllWindows()</code>。
+      これは既存フローと同じで、バグ（＝設定不変のままのリロード）とは別経路。
+    </p>
+
+    <h3>3.5　既存コードの整理（「整理込み」方針）</h3>
+    <table>
+      <thead><tr><th>対象</th><th>処置</th></tr></thead>
+      <tbody>
+        <tr><td><code>ScheduleRefreshRetry</code> / <code>s_refreshRetryScheduled</code></td><td class="verdict no">削除 — 遅延リトライループは不要に</td></tr>
+        <tr><td><code>MD3FontAutoSetup</code> の race 対策・<code>OnAfterAssemblyReload</code> のキャッシュクリア</td><td class="verdict no">削除 — ディスクアセットは生き残る</td></tr>
+        <tr><td><code>ProtectFontAsset</code> の <code>HideAndDontSave</code></td><td>修正 — 永続化と矛盾するため永続 FontAsset には適用しない</td></tr>
+        <tr><td><code>IsFontAssetBroken</code></td><td>縮小 — null/破棄チェックのみの<strong>軽量な安全網</strong>として維持（defense-in-depth）</td></tr>
+        <tr><td><code>RefreshAllWindows</code></td><td>維持 — 設定変更時の再適用用に残す</td></tr>
+        <tr><td><code>UnityAgentWindow.CreateGUI()</code> の緩和ブロック（250-257 行）</td><td class="verdict no">簡素化 — <code>_theme.ApplyTo()</code> のみ残し、<code>ClearFontCache()</code>＋<code>RefreshAllWindows()</code> の歯抜け回避ペアを削除（根本対策で不要に）</td></tr>
+      </tbody>
+    </table>
+
+    <h3>3.6　エラー処理</h3>
+    <ul>
+      <li>起動直後で <code>AssetDatabase</code> ビジー → 生成失敗時はその場は実行時 <code>CreateFontAsset</code>（現行挙動）にグレースフル縮退し、次 tick で永続化を<strong>軽量に 1 回だけ</strong>再試行。</li>
+      <li>ソース <code>Font</code> 欠如 → null を返し、呼び出し側が <code>FontDefinition.FromFont</code> にフォールバック。</li>
+      <li>生成アセットが破損 → 軽量 <code>IsFontAssetBroken</code> が検知 → 削除して再生成。</li>
+    </ul>
+
+    <h3>3.7　検証</h3>
+    <div class="steps">
+      <div class="step"><h4>歯抜け再現テスト</h4><p>チャットでメッセージ送信中／後にスクリプト再コンパイルを誘発 → 歯抜けが出ないことを確認。</p></div>
+      <div class="step"><h4>生成物の確認</h4><p><code>Generated/</code> に <code>.asset</code> ＋ アトラスのサブアセットが生成されることを確認。</p></div>
+      <div class="step"><h4>フォント変更テスト</h4><p>設定で Active フォントを変更 → 正しく再生成・描画されることを確認。</p></div>
+    </div>
+    <div class="callout">Unity Editor のフォント描画はヘッドレステスト不可のため、検証は Unity 上での手動確認となる。</div>
+  </section>
+
+  <!-- 4. 影響ファイル -->
+  <section>
+    <h2><span class="num">4</span>影響ファイル</h2>
+    <h3>unity-md3sdk</h3>
+    <table>
+      <thead><tr><th>ファイル</th><th>変更</th></tr></thead>
+      <tbody>
+        <tr><td><code>MD3FontAssetStore.cs</code></td><td><span class="verdict ok">新規</span> — 永続化ユーティリティ</td></tr>
+        <tr><td><code>MD3Theme.cs</code></td><td><code>LoadFontAsset</code> を Store 経由に置換、リトライ機構を削除、<code>IsFontAssetBroken</code> 縮小</td></tr>
+        <tr><td><code>MD3Icon.cs</code></td><td>アイコン FontAsset を Store 経由に、<code>ProtectFontAsset</code> 修正</td></tr>
+        <tr><td><code>MD3FontManager.cs</code></td><td><code>MD3FontAutoSetup</code> の race 対策削除、無効化呼び出しを追加</td></tr>
+      </tbody>
+    </table>
+    <h3>unity-agent</h3>
+    <table>
+      <thead><tr><th>ファイル</th><th>変更</th></tr></thead>
+      <tbody>
+        <tr><td><code>Editor/Core/UnityAgentWindow.cs</code></td><td><code>CreateGUI()</code> 250-257 行の歯抜け緩和ブロックを簡素化（<code>_theme.ApplyTo()</code> のみ残す）</td></tr>
+      </tbody>
+    </table>
+    <div class="callout">
+      調査結果: <code>unity-agent</code> 側の歯抜け緩和コードは <code>UnityAgentWindow.cs</code> の 1 箇所のみ。
+      他のウィンドウ（TestWindows・Settings 等）には同種の緩和コードは無い。
+    </div>
+  </section>
+
+  <!-- 5. 確認事項 -->
+  <section class="decision">
+    <h2><span class="num">5</span>確認ポイント（承認済み）</h2>
+    <div class="qbox"><span class="qn">A</span>
+      <p style="margin:0;"><strong>アイコンフォントも同じ対策に含める</strong> — 同一の根本原因のため一緒に永続化する。
+      <span class="em-good">→ 承認</span></p>
+    </div>
+    <div class="qbox"><span class="qn">B</span>
+      <p style="margin:0;"><strong>生成物が <code>Assets/MD3SDKFonts/Generated/</code> に出る</strong> — DL フォントと同じ場所に <code>.asset</code> ファイルが増える。
+      <span class="em-good">→ 承認</span></p>
+    </div>
+    <div class="qbox"><span class="qn">C</span>
+      <p style="margin:0;"><strong>実装範囲: 「整理込み」</strong> — 根本対策を入れ、不要になった遅延リトライ/race 対策コードを削減。軽量な安全網は defense-in-depth として残す。
+      <span class="em-good">→ 承認</span></p>
+    </div>
+    <p style="margin-top:18px;color:var(--on-faint);font-size:13.5px;">
+      全確認ポイント承認済み。次ステップ: 実装計画の作成。
+    </p>
+  </section>
+
+  <footer>UnityAgent / MD3SDK — FontAsset Persistence Design · 2026-05-22</footer>
+
+</div>
+</body>
+</html>
