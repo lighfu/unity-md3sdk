@@ -4303,6 +4303,7 @@ namespace AjisaiFlow.MD3SDK.Editor
         static void EnsureFont()
         {
             if (s_fontAsset != null && !s_fontAsset) { s_fontAsset = null; s_font = null; }
+            if (s_font != null && !s_font) { s_font = null; s_fontAsset = null; }
             if (s_fontAsset != null) return;
 
             if (s_font == null)
@@ -4340,8 +4341,6 @@ namespace AjisaiFlow.MD3SDK.Editor
             }
         }
 
-
-
         // ── Filled (FILL=1) variant ──
 
         static Font s_filledFont;
@@ -4377,6 +4376,7 @@ namespace AjisaiFlow.MD3SDK.Editor
         static void EnsureFilledFont()
         {
             if (s_filledFontAsset != null && !s_filledFontAsset) { s_filledFontAsset = null; s_filledFont = null; }
+            if (s_filledFont != null && !s_filledFont) { s_filledFont = null; s_filledFontAsset = null; }
             if (s_filledFontAsset != null) return;
 
             if (s_filledFont == null)
