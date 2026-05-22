@@ -302,10 +302,11 @@ namespace AjisaiFlow.MD3SDK.Editor
 
         public static void ClearFontCache()
         {
-            // DestroyImmediate しない — UI が参照中の FontAsset を破棄するとテキストが消える
-            // 旧インスタンスは GC に任せ、次回 ApplyTo で新しい FontAsset を生成する
+            // フォント設定変更時に呼ばれる。static キャッシュをクリアし、
+            // 永続化済みの生成 FontAsset アセットも削除して再生成を促す。
             s_fontAsset = null;
             s_font = null;
+            MD3FontAssetStore.InvalidateAll();
         }
 
         static bool s_refreshRetryScheduled;
@@ -334,109 +335,33 @@ namespace AjisaiFlow.MD3SDK.Editor
 
         static FontAsset LoadFontAsset()
         {
-            // ドメインリロードや AssetDatabase.Refresh で破棄されていたらクリア
-            // FontAsset 自体が生きていても内部の atlasTexture が破棄されることがある
+            // ドメインリロードで static 参照が破棄されていたらクリア
             if (s_fontAsset != null && !s_fontAsset) { s_fontAsset = null; s_font = null; }
-            if (s_font != null && !s_font) { s_font = null; s_fontAsset = null; }
-            if (s_fontAsset != null && IsFontAssetBroken(s_fontAsset)) { s_fontAsset = null; s_font = null; }
             if (s_fontAsset != null) return s_fontAsset;
 
             var baseFont = LoadFont();
             if (baseFont == null)
             {
-                // AssetDatabase 準備中の可能性 — 遅延リトライで自動回復
+                // AssetDatabase 準備中の可能性 — 次 tick で再試行
                 ScheduleRefreshRetry();
                 return null;
             }
 
-            var fa = FontAsset.CreateFontAsset(baseFont);
+            // フォールバックチェーン (多言語 + Emoji)
+            var fallbacks = MD3FontManager.LoadAllFallbackFonts(MD3FontManager.ActiveFontPrefix);
+            var emojiFont = MD3FontManager.LoadEmojiFont();
+            if (emojiFont != null) fallbacks.Add(emojiFont);
+
+            // ディスク永続化された FontAsset を取得（ドメインリロード耐性あり）
+            var fa = MD3FontAssetStore.GetOrCreate("theme", baseFont, fallbacks);
             if (fa == null)
             {
                 ScheduleRefreshRetry();
                 return null;
             }
 
-            // 生成直後でも atlasTexture が null/破棄済みの場合がある
-            // (ドメインリロード直後の AssetDatabase 半準備状態など)。
-            // そのまま UI に渡すと UIRStylePainter.DrawTextInfo で NRE になるので
-            // cache せず遅延リトライに委ねる。呼び出し側 (ApplyTo) は
-            // FontDefinition.FromFont フォールバックに落ちる。
-            if (IsFontAssetBroken(fa))
-            {
-                ScheduleRefreshRetry();
-                return null;
-            }
-
             s_fontAsset = fa;
-            MD3Icon.ProtectFontAsset(s_fontAsset);
-            s_fontAsset.fallbackFontAssetTable = new List<FontAsset>();
-
-            // インストール済みの全フォントをフォールバックに追加
-            // (多言語混在テキスト対応)
-            var activePrefix = MD3FontManager.ActiveFontPrefix;
-            foreach (var fallbackFont in MD3FontManager.LoadAllFallbackFonts(activePrefix))
-            {
-                var fallbackFa = FontAsset.CreateFontAsset(fallbackFont);
-                if (fallbackFa != null)
-                {
-                    MD3Icon.ProtectFontAsset(fallbackFa);
-                    s_fontAsset.fallbackFontAssetTable.Add(fallbackFa);
-                }
-            }
-
-            // Emoji フォールバック
-            var emojiFont = MD3FontManager.LoadEmojiFont();
-            if (emojiFont != null)
-            {
-                var emojiFontAsset = FontAsset.CreateFontAsset(emojiFont);
-                if (emojiFontAsset != null)
-                {
-                    MD3Icon.ProtectFontAsset(emojiFontAsset);
-                    s_fontAsset.fallbackFontAssetTable.Add(emojiFontAsset);
-                }
-            }
-
             return s_fontAsset;
-        }
-
-        /// <summary>
-        /// FontAsset の内部テクスチャが破棄されているか判定。
-        /// ドメインリロードやプレイモード遷移で FontAsset は生存するが
-        /// 内部の atlasTexture (Texture2D) が破棄されることがある。
-        /// </summary>
-        static bool IsFontAssetBroken(FontAsset fa)
-        {
-            try
-            {
-                // atlasTexture が null または破棄済みならキャッシュを再生成する必要がある
-                if (fa.atlasTextures == null || fa.atlasTextures.Length == 0) return true;
-                for (int i = 0; i < fa.atlasTextures.Length; i++)
-                {
-                    var tex = fa.atlasTextures[i];
-                    if (tex == null || !tex) return true;
-                }
-                // フォールバックチェーンも確認
-                if (fa.fallbackFontAssetTable != null)
-                {
-                    foreach (var fallback in fa.fallbackFontAssetTable)
-                    {
-                        if (fallback == null || !fallback) return true;
-                        if (fallback.atlasTextures != null)
-                        {
-                            for (int i = 0; i < fallback.atlasTextures.Length; i++)
-                            {
-                                var tex = fallback.atlasTextures[i];
-                                if (tex == null || !tex) return true;
-                            }
-                        }
-                    }
-                }
-                return false;
-            }
-            catch
-            {
-                return true;
-            }
         }
 
         static Font LoadFont()
