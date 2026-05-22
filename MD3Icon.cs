@@ -22,6 +22,7 @@ namespace AjisaiFlow.MD3SDK.Editor
             s_fontAsset = null;
             s_filledFont = null;
             s_filledFontAsset = null;
+            MD3FontAssetStore.InvalidateAll();
         }
 
         // ── Material Symbols Icons (4211 icons from codepoints file) ──
@@ -4301,33 +4302,33 @@ namespace AjisaiFlow.MD3SDK.Editor
 
         static void EnsureFont()
         {
-            // FontAsset がドメインリロードで破棄されていたらクリア
-            // 内部 atlasTexture の破棄も検出する
             if (s_fontAsset != null && !s_fontAsset) { s_fontAsset = null; s_font = null; }
-            if (s_font != null && !s_font) { s_font = null; s_fontAsset = null; }
-            if (s_fontAsset != null && IsFontAssetBroken(s_fontAsset)) { s_fontAsset = null; s_font = null; }
-            if (s_fontAsset != null || s_font != null) return;
+            if (s_fontAsset != null) return;
 
-            var guids = AssetDatabase.FindAssets("MaterialSymbolsOutlined t:Font");
-            foreach (var guid in guids)
+            if (s_font == null)
             {
-                var path = AssetDatabase.GUIDToAssetPath(guid);
-                if (!path.EndsWith(".ttf")) continue;
-                if (path.Contains("Filled")) continue; // Skip filled variant
-                // MD3SDK パッケージ、VPM パッケージ、またはダウンロード先 (MD3SDKFonts) から検索
-                if (!path.Contains("MD3SDK") && !path.Contains("net.ajisaiflow.md3sdk") && !path.Contains("MD3SDKFonts")) continue;
-                s_font = AssetDatabase.LoadAssetAtPath<Font>(path);
-                if (s_font != null)
+                var guids = AssetDatabase.FindAssets("MaterialSymbolsOutlined t:Font");
+                foreach (var guid in guids)
                 {
-                    s_fontAsset = FontAsset.CreateFontAsset(s_font);
-                    ProtectFontAsset(s_fontAsset);
-                    s_retryScheduled = false;
-                    return;
+                    var path = AssetDatabase.GUIDToAssetPath(guid);
+                    if (!path.EndsWith(".ttf")) continue;
+                    if (path.Contains("Filled")) continue; // Skip filled variant
+                    if (!path.Contains("MD3SDK") && !path.Contains("net.ajisaiflow.md3sdk") && !path.Contains("MD3SDKFonts")) continue;
+                    s_font = AssetDatabase.LoadAssetAtPath<Font>(path);
+                    if (s_font != null) break;
                 }
             }
 
-            // フォントが見つからなかった場合、AssetDatabase がまだ準備中の可能性がある
-            // 遅延リトライで全ウィンドウを再描画
+            if (s_font != null)
+                s_fontAsset = MD3FontAssetStore.GetOrCreate("icon", s_font, null);
+
+            if (s_fontAsset != null)
+            {
+                s_retryScheduled = false;
+                return;
+            }
+
+            // フォント未検出 / 生成失敗 — AssetDatabase 準備中の可能性。1 回だけ遅延リトライ。
             if (!s_retryScheduled)
             {
                 s_retryScheduled = true;
@@ -4339,35 +4340,7 @@ namespace AjisaiFlow.MD3SDK.Editor
             }
         }
 
-        static bool IsFontAssetBroken(FontAsset fa)
-        {
-            try
-            {
-                if (fa.atlasTextures == null || fa.atlasTextures.Length == 0) return true;
-                for (int i = 0; i < fa.atlasTextures.Length; i++)
-                {
-                    var tex = fa.atlasTextures[i];
-                    if (tex == null || !tex) return true;
-                }
-                return false;
-            }
-            catch { return true; }
-        }
 
-        /// <summary>
-        /// FontAsset とその内部 atlasTexture に HideAndDontSave を設定し、
-        /// Resources.UnloadUnusedAssets() による破棄を防止する。
-        /// </summary>
-        internal static void ProtectFontAsset(FontAsset fa)
-        {
-            if (fa == null) return;
-            fa.hideFlags = HideFlags.HideAndDontSave;
-            if (fa.atlasTextures != null)
-                foreach (var tex in fa.atlasTextures)
-                    if (tex != null) tex.hideFlags = HideFlags.HideAndDontSave;
-            if (fa.material != null)
-                fa.material.hideFlags = HideFlags.HideAndDontSave;
-        }
 
         // ── Filled (FILL=1) variant ──
 
@@ -4404,29 +4377,31 @@ namespace AjisaiFlow.MD3SDK.Editor
         static void EnsureFilledFont()
         {
             if (s_filledFontAsset != null && !s_filledFontAsset) { s_filledFontAsset = null; s_filledFont = null; }
-            if (s_filledFont != null && !s_filledFont) { s_filledFont = null; s_filledFontAsset = null; }
-            if (s_filledFontAsset != null && IsFontAssetBroken(s_filledFontAsset)) { s_filledFontAsset = null; s_filledFont = null; }
-            if (s_filledFontAsset != null || s_filledFont != null) return;
+            if (s_filledFontAsset != null) return;
 
-            var guids = AssetDatabase.FindAssets("MaterialSymbolsOutlinedFilled t:Font");
-            foreach (var guid in guids)
+            if (s_filledFont == null)
             {
-                var path = AssetDatabase.GUIDToAssetPath(guid);
-                if (!path.EndsWith(".ttf")) continue;
-                if (!path.Contains("MD3SDK") && !path.Contains("net.ajisaiflow.md3sdk") && !path.Contains("MD3SDKFonts")) continue;
-                s_filledFont = AssetDatabase.LoadAssetAtPath<Font>(path);
-                if (s_filledFont != null)
+                var guids = AssetDatabase.FindAssets("MaterialSymbolsOutlinedFilled t:Font");
+                foreach (var guid in guids)
                 {
-                    s_filledFontAsset = FontAsset.CreateFontAsset(s_filledFont);
-                    ProtectFontAsset(s_filledFontAsset);
-                    return;
+                    var path = AssetDatabase.GUIDToAssetPath(guid);
+                    if (!path.EndsWith(".ttf")) continue;
+                    if (!path.Contains("MD3SDK") && !path.Contains("net.ajisaiflow.md3sdk") && !path.Contains("MD3SDKFonts")) continue;
+                    s_filledFont = AssetDatabase.LoadAssetAtPath<Font>(path);
+                    if (s_filledFont != null) break;
                 }
             }
 
-            // FilledFilled フォントが見つからない場合、Outlined フォントにフォールバック
-            EnsureFont();
-            s_filledFont = s_font;
-            s_filledFontAsset = s_fontAsset;
+            if (s_filledFont != null)
+                s_filledFontAsset = MD3FontAssetStore.GetOrCreate("icon-filled", s_filledFont, null);
+
+            // Filled フォントが無い / 生成失敗 — Outlined フォントにフォールバック
+            if (s_filledFontAsset == null)
+            {
+                EnsureFont();
+                s_filledFont = s_font;
+                s_filledFontAsset = s_fontAsset;
+            }
         }
     }
 }
