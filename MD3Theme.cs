@@ -335,8 +335,9 @@ namespace AjisaiFlow.MD3SDK.Editor
 
         static FontAsset LoadFontAsset()
         {
-            // ドメインリロードで static 参照が破棄されていたらクリア
+            // ドメインリロードや再インポートで static 参照が破棄されていたらクリア
             if (s_fontAsset != null && !s_fontAsset) { s_fontAsset = null; s_font = null; }
+            if (s_font != null && !s_font) { s_font = null; s_fontAsset = null; }
             if (s_fontAsset != null) return s_fontAsset;
 
             var baseFont = LoadFont();
