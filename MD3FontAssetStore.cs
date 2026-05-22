@@ -109,7 +109,7 @@ namespace AjisaiFlow.MD3SDK.Editor
                     }
                 }
                 EditorUtility.SetDirty(fa);
-                AssetDatabase.SaveAssets();
+                AssetDatabase.SaveAssetIfDirty(fa);
                 AssetDatabase.ImportAsset(path);
 
                 created = true;
@@ -131,6 +131,7 @@ namespace AjisaiFlow.MD3SDK.Editor
         {
             try
             {
+                if (fa == null || !fa) return true; // C# null / Unity 破棄済み の両方を弾く
                 if (fa.atlasTextures == null || fa.atlasTextures.Length == 0) return true;
                 for (int i = 0; i < fa.atlasTextures.Length; i++)
                 {
@@ -147,6 +148,8 @@ namespace AjisaiFlow.MD3SDK.Editor
             if (AssetDatabase.IsValidFolder(GeneratedDir)) return;
             if (!AssetDatabase.IsValidFolder(ParentDir))
             {
+                // 物理フォルダは存在するが AssetDatabase 未登録のケースに対応する。
+                // 通常 GetOrCreate 到達時点で MD3SDKFonts は登録済みのため、ここはほぼ通らない。
                 Directory.CreateDirectory(Path.Combine(Application.dataPath, "MD3SDKFonts"));
                 AssetDatabase.Refresh();
             }
