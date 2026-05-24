@@ -81,7 +81,23 @@ namespace AjisaiFlow.MD3SDK.Editor
                 AssetDatabase.DeleteAsset(path);
 
             FontAsset fa;
-            try { fa = FontAsset.CreateFontAsset(iconFont); }
+            try
+            {
+                // Material Symbols は 4000+ PUA codepoint を持つため default の
+                // 1024x1024 atlas / samplingPointSize=90 では収まらない (overflow → □)。
+                // 2048x2048 + samplingPointSize=50 + multi-atlas で全 codepoint を焼く。
+                // SDF レンダリングなので samplingPointSize を下げても表示時の品質は
+                // 影響を受けにくい (UI の icon は 16-24px 程度で描画される)。
+                fa = FontAsset.CreateFontAsset(
+                    iconFont,
+                    samplingPointSize: 50,
+                    atlasPadding: 4,
+                    renderMode: UnityEngine.TextCore.LowLevel.GlyphRenderMode.SDFAA,
+                    atlasWidth: 2048,
+                    atlasHeight: 2048,
+                    atlasPopulationMode: AtlasPopulationMode.Dynamic,
+                    enableMultiAtlasSupport: true);
+            }
             catch (System.Exception ex)
             {
                 Debug.LogError($"[MD3FontAssetStore] CreateFontAsset(icon) failed for '{key}': {ex.Message}");
@@ -100,14 +116,13 @@ namespace AjisaiFlow.MD3SDK.Editor
                     if (!string.IsNullOrEmpty(s)) sb.Append(s);
                 if (sb.Length > 0)
                 {
-                    fa.isMultiAtlasTexturesEnabled = true;
                     if (!fa.TryAddCharacters(sb.ToString(), out string missing) &&
                         !string.IsNullOrEmpty(missing))
                     {
                         Debug.LogWarning(
                             $"[MD3FontAssetStore] Icon atlas could not contain all codepoints " +
                             $"for '{key}'. Missing {missing.Length} codepoint(s). " +
-                            $"Consider reducing samplingPointSize or splitting the icon font.");
+                            $"Consider further reducing samplingPointSize or splitting the icon font.");
                     }
                 }
             }
