@@ -110,7 +110,13 @@ namespace AjisaiFlow.MD3SDK.Editor
                 }
                 EditorUtility.SetDirty(fa);
                 AssetDatabase.SaveAssetIfDirty(fa);
-                AssetDatabase.ImportAsset(path);
+                // 注意: 過去には SaveAssetIfDirty の直後に AssetDatabase.ImportAsset(path) を呼んでいたが、
+                // CreateAsset + AddObjectToAsset + SaveAssetIfDirty で既にインポートは完了している。
+                // 明示的な再 ImportAsset は AssetDatabase V2 で同じ guid に対して
+                // artifactId が分裂する原因となり (ConsistencyChecker が "inconsistent result" を警告)、
+                // 後続の SceneView 描画中に TextEditorResourceManager.DoPostRenderUpdates が
+                // 該当アセットを再インポートしようとした際に GPU バッファ破壊 → Unity クラッシュを
+                // 引き起こしていたため、この呼び出しは削除する。
 
                 created = true;
                 var loaded = AssetDatabase.LoadAssetAtPath<FontAsset>(path);
@@ -165,6 +171,49 @@ namespace AjisaiFlow.MD3SDK.Editor
                 if (!char.IsLetterOrDigit(chars[i]) && chars[i] != '-' && chars[i] != '_')
                     chars[i] = '_';
             return new string(chars);
+        }
+    }
+
+    /// <summary>
+    /// 旧版 MD3FontAssetStore は SaveAssetIfDirty の直後に AssetDatabase.ImportAsset を
+    /// 呼んでおり、AssetDatabase V2 で同一 guid に対し artifactId 分裂を発生させ、
+    /// SceneView 描画中の TextEditorResourceManager.DoPostRenderUpdates による
+    /// 再インポートで GPU バッファが破壊され Unity がクラッシュしていた。
+    /// 修正版コードでは分裂は発生しないが、既に分裂状態で永続化された .asset は
+    /// 残ったままなので、SDK アップグレード時にユーザーが手動で
+    /// Assets/MD3SDKFonts/Generated/ を削除する手間を省くために
+    /// 1 度だけ <see cref="MD3FontAssetStore.InvalidateAll"/> を実行する。
+    /// </summary>
+    [InitializeOnLoad]
+    static class MD3FontAssetStoreMigration
+    {
+        const int CurrentVersion = 1;
+        const string KeyPrefix = "MD3SDK.FontStore.MigrationVersion:";
+
+        static MD3FontAssetStoreMigration()
+        {
+            // 静的初期化中 / import 中は AssetDatabase 操作が不安定なので 1 tick 遅延する。
+            EditorApplication.delayCall += Run;
+        }
+
+        static void Run()
+        {
+            // EditorPrefs はマシン共通なので、プロジェクト dataPath で名前空間を切る。
+            // string.GetHashCode は AppDomain ごとにランダム化されるため Hash128 を使う。
+            var key = KeyPrefix + Hash128.Compute(Application.dataPath);
+            if (EditorPrefs.GetInt(key, 0) >= CurrentVersion) return;
+
+            try
+            {
+                MD3FontAssetStore.InvalidateAll();
+            }
+            catch (System.Exception ex)
+            {
+                // フラグは立てず、次回 domain reload で再試行させる。
+                Debug.LogWarning($"[MD3FontAssetStore] migration v{CurrentVersion} failed: {ex.Message}");
+                return;
+            }
+            EditorPrefs.SetInt(key, CurrentVersion);
         }
     }
 }

@@ -5,6 +5,46 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.3] - 2026-05-24
+
+### Fixed
+- `MD3FontAssetStore` で AssetDatabase V2 の artifactId 分裂を引き起こしていた冗長な再インポートを削除
+  - `CreateAsset` + `AddObjectToAsset` + `SaveAssetIfDirty` 直後に呼んでいた `AssetDatabase.ImportAsset(path)` を削除
+  - 旧版が引き起こしていた `ConsistencyChecker` の "inconsistent result" 警告と、SceneView 描画中の `TextEditorResourceManager.DoPostRenderUpdates` 経由での GPU バッファ破壊 → D3D11 クラッシュを解消（MeshPainter v2 など `SceneView.duringSceneGui` を使うツールを開いた瞬間に Unity がクラッシュする問題）
+
+### Added
+- 旧版で分裂状態になった `Assets/MD3SDKFonts/Generated/` 配下の `FontAsset` を 1 度だけ自動削除する `MD3FontAssetStoreMigration` (`[InitializeOnLoad]` + `EditorApplication.delayCall`) を追加
+  - SDK アップグレード時にユーザーが手動で `Generated/` を消す必要がなくなり、初回エディタ起動時に healthy な `FontAsset` が自動再生成される
+  - 実行済みフラグは project dataPath 単位の `EditorPrefs` キーで管理し、フォントの再ビルドは 1 度のみ
+
+## [0.8.2] - 2026-05-22
+
+### Added
+- `MD3FontAssetStore`: 実行時生成の `FontAsset` を `Assets/MD3SDKFonts/Generated/` 配下のディスクアセットとして永続化するストアを追加
+  - `atlasTexture` / `material` をサブアセットとして保存し、ドメインリロード / プレイモード遷移後もアトラスを無傷で復帰
+  - `MD3Theme.LoadFontAsset` および `MD3Icon.EnsureFont` / `EnsureFilledFont` をストア経由に変更
+
+### Removed
+- `IsFontAssetBroken` / `ProtectFontAsset` / `MD3FontAutoSetup.OnAfterAssemblyReload` を削除（永続化により atlas が壊れなくなったため不要）
+- `ClearFontCache` / `ClearCache` を `MD3FontAssetStore.InvalidateAll` 呼び出しに置き換え
+
+### Fixed
+- ドメインリロード後の "テキスト歯抜け" バグの根本解決（atlas `Texture2D` が破棄されるのを永続化で回避）
+
+## [0.8.1] - 2026-04-16
+
+### Fixed
+- カスタムテーマがタブ切り替え時に消える問題を修正（`DetachFromPanelEvent` のハンドリング不備）
+
+## [0.8.0] - 2026-04-16
+
+### Added
+- SDK 設定ウィンドウに seed color picker を備えた default theme を追加
+- `MD3TextStyle` に `LabelMedium` / `LabelSmall` を追加
+
+### Deprecated
+- `MD3TextStyle.LabelCaption`
+
 ## [0.7.2] - 2026-04-16
 
 ### Fixed
@@ -37,5 +77,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Sample window demonstrating all components (`Window > 紫陽花広場 > MD3 Toolkit Sample`)
 - Settings window for font and language configuration (`Window > 紫陽花広場 > MD3 SDK Settings`)
 
+[0.8.3]: https://github.com/lighfu/unity-md3sdk/releases/tag/v0.8.3
+[0.8.2]: https://github.com/lighfu/unity-md3sdk/releases/tag/v0.8.2
+[0.8.1]: https://github.com/lighfu/unity-md3sdk/releases/tag/v0.8.1
+[0.8.0]: https://github.com/lighfu/unity-md3sdk/releases/tag/v0.8.0
+[0.7.2]: https://github.com/lighfu/unity-md3sdk/releases/tag/v0.7.2
 [0.7.1]: https://github.com/lighfu/unity-md3sdk/releases/tag/v0.7.1
 [0.7.0]: https://github.com/lighfu/unity-md3sdk/releases/tag/v0.7.0
