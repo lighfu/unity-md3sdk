@@ -353,7 +353,11 @@ namespace AjisaiFlow.MD3SDK.Editor
             var emojiFont = MD3FontManager.LoadEmojiFont();
             if (emojiFont != null) fallbacks.Add(emojiFont);
 
-            // ディスク永続化された FontAsset を取得（ドメインリロード耐性あり）
+            // Static main FontAsset (ディスク永続化) + memory-only Dynamic fallback を取得。
+            // 重要: 返ってきた main は Static で atlas 変更を起こさない。
+            // fa の fallbackFontAssetTable はランタイム代入 (シリアライズなし) のため、
+            // main に対して EditorUtility.SetDirty / AssetDatabase.SaveAssetIfDirty を
+            // 呼んではならない (artifactId 分裂 → UUM-69151 を踏む)。
             var fa = MD3FontAssetStore.GetOrCreate("theme", baseFont, fallbacks);
             if (fa == null)
             {

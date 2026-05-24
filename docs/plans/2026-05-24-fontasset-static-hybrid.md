@@ -799,3 +799,27 @@ PR 作成後、URL をユーザーに伝える。リリース (`/release`) は�
   - Unity クラッシュ: なし ✅
 - 判定: **GO** — 案F は技術的に成立。Task 3 の本実装に進む。
 - 既存 `MD3_FA_theme.asset` 由来の警告は Task 3 の migration v2 で自動削除されることで消える見込み。
+
+---
+
+## Task 6 Verification Result
+
+- 実行日時: 2026-05-24 JST
+- 検証環境: Unity 2022.3.22f1, ALCOM プロジェクト (com.ajisaiflow.vrchat.avater)
+- 実施操作:
+  1. `Assets/MD3SDKFonts/Generated/` を削除 (Unity MCP `DeleteAsset`)
+  2. `TriggerDomainReload` を複数回実行
+  3. UnityAgent ウィンドウを開いて描画確認
+- 結果:
+  - **`Importer(NativeFormatImporter) generated inconsistent result` WARN: 0 件 ✅** (案F の主目的達成)
+  - **`[MD3FontAssetStore] Icon atlas could not contain all codepoints` WARN: 0 件 ✅** (atlas overflow も解消)
+  - **Unity クラッシュ: なし ✅**
+  - 日本語/絵文字描画: 正常 (memory-only Dynamic fallback が機能)
+  - MD3SDK の `MD3Icon.*` 定数経由のアイコン描画: 正常
+  - 例外: UnityAgent 側 `ToolbarPanel.cs:83` で `""` という古い Material Symbols codepoint が直書きされており、現行フォントにグリフが存在しないため □ 表示。`MD3Icon.History`（`""`）への置き換えが必要だが、これは UnityAgent 側のバグで MD3SDK の責務外。
+- 適用された修正コミット:
+  - `840ba60` feat(font): rewrite MD3FontAssetStore to Static main + memory-only Dynamic fallback
+  - `ffcb924` fix(font): destroy old fallbacks, refresh windows after migration, wire MD3Icon to GetOrCreateIconFont
+  - `e8c2e0d` fix(font): enable multi-atlas for icons, defer fallback destroy, log delete failures
+  - `e780f93` fix(font): use full CreateFontAsset overload for icon to fit all 4000+ codepoints
+- 判定: **PR 作成可** (案F は技術的に成立、Unity 2022.3 での WARN/クラッシュを構造的に解消)
