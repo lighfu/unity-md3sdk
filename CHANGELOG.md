@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.5] - 2026-05-24
+
+### Fixed
+- v0.8.4 のリリース後、UnityAgent などのテキスト描画中に `MissingReferenceException: The object of type 'Texture2D' has been destroyed` が `FontAsset.TryAddCharacterInternal` で発生し、テキストの一部 (特に動的な日本語/絵文字) が描画されなくなる問題を修正。
+- 根本原因: memory-only Dynamic fallback FontAsset に設定していた `HideFlags.DontSave` は「シリアライズしない」フラグでしかなく、Unity の `Resources.UnloadUnusedAssets` から atlas Texture2D を保護しない。正しくは `HideFlags.HideAndDontSave` (= `DontSave | HideInHierarchy | NotEditable`) を使う必要があった。さらに `isMultiAtlasTexturesEnabled = true` (default) では atlas overflow 時に新しい Texture2D が default HideFlags で作られ、同じ回収問題が再発する。
+- 対策: fallback FontAsset を `FontAsset.CreateFontAsset` full overload で `atlasWidth/Height: 2048`, `enableMultiAtlasSupport: false` で初期化し、FontAsset 本体・material・atlasTextures すべてに `HideFlags.HideAndDontSave` を明示的に設定する。これにより 1 つの 2048×2048 atlas にすべての動的文字を集約し、追加 Texture2D が一切作られなくなる。
+
 ## [0.8.4] - 2026-05-24
 
 ### Fixed
