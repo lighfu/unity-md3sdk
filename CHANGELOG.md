@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.4] - 2026-05-24
+
+### Fixed
+- Unity 2022.3 で `Importer(NativeFormatImporter) generated inconsistent result` 警告が累積し、最終的に D3D11 GPU バッファ参照不整合で Unity がクラッシュする問題を構造的に修正。根本原因は Unity 公式の既知バグ UUM-69151 (Unity 6 で fix) で、Dynamic な FontAsset を `.asset` として永続化していると `TextEditorResourceManager.DoPostRenderUpdates` が `ImportAsset(path)` を呼び、AssetDatabase V2 が同 input・同 contentHash に対して異なる artifactId を生成することで分裂が発生する。
+- `MD3FontAssetStore` を Static main + memory-only Dynamic fallback 構造に再設計。main FontAsset は ASCII printable のみ事前焼きして `AtlasPopulationMode.Static` で固定し、動的文字 (日本語・絵文字・新規漢字) はすべて `HideFlags.DontSave` の memory-only Dynamic fallback で受ける。これにより main の atlas が dirty 化せず、`DoPostRenderUpdates` が `ImportAsset` を呼ばなくなる。
+- Material Symbols アイコンフォントは `FontAsset.CreateFontAsset` を full overload で初期化 (`samplingPointSize: 50`, `atlasWidth/Height: 2048`, `enableMultiAtlasSupport: true`) し、`MD3Icon` の全 PUA codepoint (4000+) を `TryAddCharacters` で事前焼きしてから Static 固定するため、ランタイムでの atlas 拡張が発生しなくなった。
+- 旧バージョン (v0.8.3 以前) で生成済みの Dynamic 永続化アセットは migration v2 で自動削除して作り直す (`Assets/MD3SDKFonts/Generated/` 配下)。migration 完了後に `MD3FontManager.RefreshAllWindows()` を遅延呼び出しすることで、既存ウィンドウのフォント参照も自動的に更新される。
+
+### Note
+- Unity 6000.0.x 以降を使う場合は本修正は不要 (Unity 自身が UUM-69151 を fix 済み)。ただし本修正は Unity 6 でも動作する。
+- `MD3Icon` の定数を経由せず、UI コードが直接 Material Symbols の codepoint 文字列を書き込んでいる場合、その codepoint は事前焼き対象外となり描画できない。`MD3Icon.<Name>` 定数の利用を推奨する。
+
 ## [0.8.3] - 2026-05-24
 
 ### Fixed
