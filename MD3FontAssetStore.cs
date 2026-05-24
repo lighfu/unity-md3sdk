@@ -227,7 +227,25 @@ namespace AjisaiFlow.MD3SDK.Editor
         static FontAsset CreateMemoryOnlyDynamicFallback(Font baseFont)
         {
             FontAsset fb;
-            try { fb = FontAsset.CreateFontAsset(baseFont); }
+            try
+            {
+                // single-atlas (2048x2048) + multi-atlas disable: ランタイムで atlas が
+                // 拡張されると新しい Texture2D が default HideFlags で作られ、
+                // UnloadUnusedAssets で回収されて MissingReferenceException を引き起こす。
+                // single atlas に集約して新 Texture が作られないようにする。
+                // 2048x2048 + samplingPointSize=50 で約 1200 glyph 収容可能。
+                // overflow した場合は missing characters として □ になるが、
+                // クラッシュ/MissingReferenceException よりは妥当な劣化。
+                fb = FontAsset.CreateFontAsset(
+                    baseFont,
+                    samplingPointSize: 50,
+                    atlasPadding: 4,
+                    renderMode: UnityEngine.TextCore.LowLevel.GlyphRenderMode.SDFAA,
+                    atlasWidth: 2048,
+                    atlasHeight: 2048,
+                    atlasPopulationMode: AtlasPopulationMode.Dynamic,
+                    enableMultiAtlasSupport: false);
+            }
             catch (System.Exception ex)
             {
                 Debug.LogWarning($"[MD3FontAssetStore] memory-only fallback failed for '{baseFont.name}': {ex.Message}");
@@ -235,8 +253,23 @@ namespace AjisaiFlow.MD3SDK.Editor
             }
             if (fb == null) return null;
             fb.name = "MD3_FA_dyn_" + Sanitize(baseFont.name);
-            fb.atlasPopulationMode = AtlasPopulationMode.Dynamic;
-            fb.hideFlags = HideFlags.DontSave; // AssetDatabase 管理外 = ImportAsset 対象外
+
+            // HideFlags.HideAndDontSave 必須。DontSave だけでは UnloadUnusedAssets で
+            // 内部の atlas Texture2D が回収され、TryAddCharacterInternal で
+            // MissingReferenceException が発生する。FontAsset 本体だけでなく
+            // material と atlasTextures にも明示的に同じ HideFlags を設定する
+            // (Unity は親 Object の HideFlags を子に伝播しない)。
+            fb.hideFlags = HideFlags.HideAndDontSave;
+            if (fb.material != null)
+                fb.material.hideFlags = HideFlags.HideAndDontSave;
+            if (fb.atlasTextures != null)
+            {
+                for (int i = 0; i < fb.atlasTextures.Length; i++)
+                {
+                    var tex = fb.atlasTextures[i];
+                    if (tex != null) tex.hideFlags = HideFlags.HideAndDontSave;
+                }
+            }
             return fb;
         }
 
@@ -246,6 +279,7 @@ namespace AjisaiFlow.MD3SDK.Editor
             for (int i = 0; i < table.Count; i++)
             {
                 var old = table[i];
+                // HideAndDontSave は DontSave bit を含むので両方マッチする
                 if (old != null && (old.hideFlags & HideFlags.DontSave) != 0)
                     Object.DestroyImmediate(old);
             }
