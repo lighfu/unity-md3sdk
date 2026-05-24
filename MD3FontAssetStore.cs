@@ -45,7 +45,10 @@ namespace AjisaiFlow.MD3SDK.Editor
                 // ScriptableObject 派生の FontAsset は HideFlags.DontSave だと GC で
                 // ネイティブ側 (atlas/glyph table) が解放されないので、自前で
                 // DestroyImmediate して native leak を防ぐ。
-                DestroyMemoryOnlyFallbacks(main.fallbackFontAssetTable);
+                // ただし repaint 中に TextCore が古い fallback の native ポインタを
+                // 参照している可能性があるため、まずテーブルを差し替えて参照を切り、
+                // 古いインスタンスの destroy は 1 tick 遅延させる。
+                var stale = main.fallbackFontAssetTable;
 
                 var table = new List<FontAsset>(fallbackFonts.Count);
                 foreach (var fb in fallbackFonts)
@@ -55,6 +58,9 @@ namespace AjisaiFlow.MD3SDK.Editor
                     if (dyn != null) table.Add(dyn);
                 }
                 main.fallbackFontAssetTable = table;
+
+                if (stale != null)
+                    EditorApplication.delayCall += () => DestroyMemoryOnlyFallbacks(stale);
             }
             return main;
         }
@@ -84,13 +90,26 @@ namespace AjisaiFlow.MD3SDK.Editor
             if (fa == null || IsBroken(fa)) return null;
 
             // 全 codepoint を事前焼き
+            // 注意: default の atlas は 1024x1024 で、Material Symbols 4000+ codepoint は
+            //       1 ページに収まらず silently drop される (= 一部アイコンが □ 表示)。
+            //       isMultiAtlasTexturesEnabled = true で overflow を別 atlas に逃がす。
             if (codepointStrings != null)
             {
                 var sb = new System.Text.StringBuilder(8192);
                 foreach (var s in codepointStrings)
                     if (!string.IsNullOrEmpty(s)) sb.Append(s);
                 if (sb.Length > 0)
-                    fa.TryAddCharacters(sb.ToString(), out _);
+                {
+                    fa.isMultiAtlasTexturesEnabled = true;
+                    if (!fa.TryAddCharacters(sb.ToString(), out string missing) &&
+                        !string.IsNullOrEmpty(missing))
+                    {
+                        Debug.LogWarning(
+                            $"[MD3FontAssetStore] Icon atlas could not contain all codepoints " +
+                            $"for '{key}'. Missing {missing.Length} codepoint(s). " +
+                            $"Consider reducing samplingPointSize or splitting the icon font.");
+                    }
+                }
             }
             fa.atlasPopulationMode = AtlasPopulationMode.Static;
             return PersistAsSubassetBundle(fa, path, $"MD3_FA_{Sanitize(key)}");
@@ -177,7 +196,12 @@ namespace AjisaiFlow.MD3SDK.Editor
                     if (AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(path) != null)
                         AssetDatabase.DeleteAsset(path);
                 }
-                catch { /* best effort */ }
+                catch (System.Exception delEx)
+                {
+                    Debug.LogWarning(
+                        $"[MD3FontAssetStore] Failed to delete partial asset at '{path}' " +
+                        $"after persist failure: {delEx.Message}");
+                }
 
                 Debug.LogWarning($"[MD3FontAssetStore] Persist failed for '{baseName}' ({ex.Message}); " +
                                  "returning runtime instance for this session.");
