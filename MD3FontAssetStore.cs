@@ -42,6 +42,11 @@ namespace AjisaiFlow.MD3SDK.Editor
             //       main の artifactId は変化しない = WARN 発生条件を踏まない)
             if (fallbackFonts != null && fallbackFonts.Count > 0)
             {
+                // ScriptableObject 派生の FontAsset は HideFlags.DontSave だと GC で
+                // ネイティブ側 (atlas/glyph table) が解放されないので、自前で
+                // DestroyImmediate して native leak を防ぐ。
+                DestroyMemoryOnlyFallbacks(main.fallbackFontAssetTable);
+
                 var table = new List<FontAsset>(fallbackFonts.Count);
                 foreach (var fb in fallbackFonts)
                 {
@@ -64,7 +69,7 @@ namespace AjisaiFlow.MD3SDK.Editor
             var path = $"{GeneratedDir}/MD3_FA_{Sanitize(key)}.asset";
 
             var existing = AssetDatabase.LoadAssetAtPath<FontAsset>(path);
-            if (existing != null && !IsBroken(existing))
+            if (existing != null && !IsBroken(existing) && existing.atlasPopulationMode == AtlasPopulationMode.Static)
                 return existing;
             if (existing != null)
                 AssetDatabase.DeleteAsset(path);
@@ -164,6 +169,16 @@ namespace AjisaiFlow.MD3SDK.Editor
             }
             catch (System.Exception ex)
             {
+                // CreateAsset が成功した後で失敗した場合、半端な状態の .asset が
+                // ディスクに残ると次回 LoadAssetAtPath が壊れたアセットを返す。
+                // 完全に削除して runtime instance のみ返す。
+                try
+                {
+                    if (AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(path) != null)
+                        AssetDatabase.DeleteAsset(path);
+                }
+                catch { /* best effort */ }
+
                 Debug.LogWarning($"[MD3FontAssetStore] Persist failed for '{baseName}' ({ex.Message}); " +
                                  "returning runtime instance for this session.");
                 return fa;
@@ -184,6 +199,17 @@ namespace AjisaiFlow.MD3SDK.Editor
             fb.atlasPopulationMode = AtlasPopulationMode.Dynamic;
             fb.hideFlags = HideFlags.DontSave; // AssetDatabase 管理外 = ImportAsset 対象外
             return fb;
+        }
+
+        static void DestroyMemoryOnlyFallbacks(IList<FontAsset> table)
+        {
+            if (table == null) return;
+            for (int i = 0; i < table.Count; i++)
+            {
+                var old = table[i];
+                if (old != null && (old.hideFlags & HideFlags.DontSave) != 0)
+                    Object.DestroyImmediate(old);
+            }
         }
 
         static bool IsBroken(FontAsset fa)
@@ -254,6 +280,19 @@ namespace AjisaiFlow.MD3SDK.Editor
                 return;
             }
             EditorPrefs.SetInt(key, CurrentVersion);
+
+            // 既存ウィンドウは削除された FontAsset への参照を保持しているため
+            // (atlas 消失で描画失敗 → アイコン □ 化) 全ウィンドウに新しい FontAsset を
+            // 再注入する。さらに 1 tick 遅延させて AssetDatabase の DeleteAsset が
+            // 完全に反映されてから RefreshAllWindows を実行する。
+            EditorApplication.delayCall += () =>
+            {
+                try { MD3FontManager.RefreshAllWindows(); }
+                catch (System.Exception ex)
+                {
+                    Debug.LogWarning($"[MD3FontAssetStore] RefreshAllWindows after migration failed: {ex.Message}");
+                }
+            };
         }
     }
 }

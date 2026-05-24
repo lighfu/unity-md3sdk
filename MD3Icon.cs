@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
@@ -23,6 +24,21 @@ namespace AjisaiFlow.MD3SDK.Editor
             s_filledFont = null;
             s_filledFontAsset = null;
             MD3FontAssetStore.InvalidateAll();
+        }
+
+        /// <summary>このクラスの全 const string (Material Symbols PUA codepoint 群) を列挙する。</summary>
+        static IEnumerable<string> EnumerateAllIconCodepoints()
+        {
+            var t = typeof(MD3Icon);
+            var fields = t.GetFields(System.Reflection.BindingFlags.Public |
+                                     System.Reflection.BindingFlags.Static);
+            foreach (var f in fields)
+            {
+                if (f.FieldType != typeof(string)) continue;
+                if (!f.IsLiteral || f.IsInitOnly) continue; // const のみ
+                var v = (string)f.GetRawConstantValue();
+                if (!string.IsNullOrEmpty(v)) yield return v;
+            }
         }
 
         // ── Material Symbols Icons (4211 icons from codepoints file) ──
@@ -4321,7 +4337,7 @@ namespace AjisaiFlow.MD3SDK.Editor
             }
 
             if (s_font != null)
-                s_fontAsset = MD3FontAssetStore.GetOrCreate("icon", s_font, null);
+                s_fontAsset = MD3FontAssetStore.GetOrCreateIconFont("icon", s_font, EnumerateAllIconCodepoints());
 
             if (s_fontAsset != null)
             {
@@ -4393,7 +4409,7 @@ namespace AjisaiFlow.MD3SDK.Editor
             }
 
             if (s_filledFont != null)
-                s_filledFontAsset = MD3FontAssetStore.GetOrCreate("icon-filled", s_filledFont, null);
+                s_filledFontAsset = MD3FontAssetStore.GetOrCreateIconFont("icon-filled", s_filledFont, EnumerateAllIconCodepoints());
 
             // Filled フォントが無い / 生成失敗 — Outlined フォントにフォールバック
             if (s_filledFontAsset == null)
