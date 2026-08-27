@@ -496,7 +496,11 @@ namespace AjisaiFlow.MD3SDK.Editor
     [InitializeOnLoad]
     static class MD3FontAssetStoreMigration
     {
-        const int CurrentVersion = 2;
+        // v3: BMP 外 (サロゲートペア) の codepoint が 1 つも焼かれていなかった不具合の修正。
+        //     入力ハッシュの記録が無い既存アセットは InputHashMatches が「現在の入力で
+        //     焼かれたもの」として採用するため、放置すると v0.8.5 以前で焼かれた
+        //     51 個欠けたままの atlas が使われ続ける。ここで 1 度だけ確実に捨てる。
+        const int CurrentVersion = 3;
         const string KeyPrefix = "MD3SDK.FontStore.MigrationVersion:";
 
         static MD3FontAssetStoreMigration()

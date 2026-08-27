@@ -64,6 +64,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   踏まないよう「現在の入力で焼かれたもの」とみなして記録だけ引き継ぐ。
   古い世代を強制的に捨てたいときは従来どおり `MD3FontAssetStoreMigration.CurrentVersion`
   を上げる。
+- **移行版数を 3 に更新** — 今回は codepoint 集合が実際に変わる (BMP 外の 51 個が加わる) ため、
+  上記の「記録が無ければ現在の入力とみなす」挙動に任せると、v0.8.5 以前で焼かれた
+  51 個欠けたままの atlas がそのまま採用されてしまう。移行版数を上げて 1 度だけ
+  確実に捨てる。実測で、更新時にドメインリロードで migration が発火して旧アセットを削除し、
+  次の描画で 5.8 秒かけて 3911 codepoint に焼き直されることを確認済み。
 
 ### Added
 
