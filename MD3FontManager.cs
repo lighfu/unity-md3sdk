@@ -42,7 +42,7 @@ namespace AjisaiFlow.MD3SDK.Editor
                         MD3FontManager.RefreshAllWindows();
                     }
                     else
-                        Debug.LogWarning("[MD3SDK] アイコンフォントのダウンロードに失敗しました。Window/紫陽花広場/MD3 SDK Settings から手動でインストールできます。");
+                        Debug.LogWarning("[MD3SDK] アイコンフォントのダウンロードに失敗しました。Window/紫陽花広場/Unity Material Design 3 SDK/Settings から手動でインストールできます。");
                     CheckNotoSans();
                 });
                 return;
@@ -74,7 +74,7 @@ namespace AjisaiFlow.MD3SDK.Editor
                     MD3FontManager.RefreshAllWindows();
                 }
                 else
-                    Debug.LogWarning($"[MD3SDK] {recommended.Value.DisplayName} のダウンロードに失敗しました。Window/紫陽花広場/MD3 SDK Settings から手動でインストールできます。");
+                    Debug.LogWarning($"[MD3SDK] {recommended.Value.DisplayName} のダウンロードに失敗しました。Window/紫陽花広場/Unity Material Design 3 SDK/Settings から手動でインストールできます。");
                 CheckEmoji();
             });
         }
@@ -92,7 +92,7 @@ namespace AjisaiFlow.MD3SDK.Editor
                     MD3FontManager.RefreshAllWindows();
                 }
                 else
-                    Debug.LogWarning("[MD3SDK] Emoji フォントのダウンロードに失敗しました。Window/紫陽花広場/MD3 SDK Settings から手動でインストールできます。");
+                    Debug.LogWarning("[MD3SDK] Emoji フォントのダウンロードに失敗しました。Window/紫陽花広場/Unity Material Design 3 SDK/Settings から手動でインストールできます。");
             });
         }
     }

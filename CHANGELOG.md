@@ -77,6 +77,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   変わらず既存アセットが使われ続ける。実際この修正がそれを踏み、移行版数の手動バンプで
   救う羽目になった。パラメータ定数から組み立てたレシピ文字列と `BakeFormatVersion` を
   ハッシュに含めるようにしたので、今後のパラメータ変更は自動的に焼き直しへつながる。
+- **メニューを 1 つのフォルダにまとめた** — これまで `MD3 SDK Sample` と
+  `MD3 SDK Settings` が「紫陽花広場」のルート直下に並び、診断ツールだけが
+  別名の `MD3 SDK Diagnostics` フォルダにあった。同じルートを共有する他製品は
+  「1 製品 1 フォルダ」で揃っているため、この 1 つだけが浮いていた。
+  `Window/紫陽花広場/Unity Material Design 3 SDK/` の下に集約する。
+
+  ```
+  Unity Material Design 3 SDK/
+  ├── Settings
+  ├── Sample
+  └── Diagnostics/
+      ├── Component Benchmark
+      └── Narrow Layout Probe (...)
+  ```
+
+  パスは `MD3Menu` に集約したので、今後フォルダ名を変えても取りこぼしが出ない。
+  **メニューの位置が変わる破壊的変更**です (機能に変更はありません)。
 - **移行版数を 3 に更新** — 今回は codepoint 集合が実際に変わる (BMP 外の 51 個が加わる) ため、
   上記の「記録が無ければ現在の入力とみなす」挙動に任せると、v0.8.5 以前で焼かれた
   51 個欠けたままの atlas がそのまま採用されてしまう。移行版数を上げて 1 度だけ
@@ -95,7 +112,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   通常の文章にアイコンフォントを当てた場合は警告しない。
 - `MD3FontManager.RebuildFontAssets()` — 生成済み FontAsset を全削除してから貼り直す。
   アトラスが壊れた場合の手動復旧用。通常は `RefreshAllWindows()` で足りる。
-- **Narrow Layout Probe** (`Window/紫陽花広場/MD3 SDK Diagnostics/`) —
+- **Narrow Layout Probe** (`Window/紫陽花広場/Unity Material Design 3 SDK/Diagnostics/`) —
   狭い幅でレイアウトが返ってこなくなる事象 (#4) の犯人を切り分ける検査ウィンドウ。
   素の Label から全部乗せまで 11 段階の構成を、幅を変えながら 1 つずつ開く。
   ログは `Logs/MD3SDK_LayoutProbe.log` に 1 行ずつ flush して書くので、ハングして
@@ -107,7 +124,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `cold` は一度も広い幅を通さずいきなり 100px で開く
   (`EditorWindow` の既定 minSize が 100x100 なので、`minSize` を設定していない
   ウィンドウの初回レイアウトはこの幅になる)。
-- **Component Benchmark** (`Window/紫陽花広場/MD3 SDK Diagnostics/Component Benchmark`) —
+- **Component Benchmark** (`Window/紫陽花広場/Unity Material Design 3 SDK/Diagnostics/Component Benchmark`) —
   SDK の全コンポーネントを一括計測するベンチマーク。アセンブリ内の public な
   `VisualElement` 派生型をリフレクションで列挙するので、コンポーネントを追加しても
   自動的に対象に入る (67 型を計測、引数なしで生成できない 2 型のみスキップ)。
