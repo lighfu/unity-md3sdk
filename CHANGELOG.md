@@ -42,6 +42,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   毎 tick 際限なく再武装していた。1 回のリトライが `InvalidateAll` + 全 codepoint の
   焼き直しを伴うため、フォントが見つからない間ずっと CPU を焼き続けることになる。
   フラグを処理後に戻し、成功するまで最大 3 回で頭を打つようにした。
+- **無効にした fallback が残り続けていた** — `GetOrCreate` は fallback リストが
+  空でないときしか `fallbackFontAssetTable` を作り直しておらず、`RefreshAllWindows` が
+  main アセットを削除しなくなったことで、Emoji を off にしても古い fallback が
+  繋がったままになっていた。空でも必ず差し替える。
+- **BMP 外アイコンにアイコンフォントが当たっていなかった** — `MD3SegmentedButton` の
+  `labels[i][0] >= '\uE000'` という判定は、BMP 外のアイコンだと先頭が上位サロゲート
+  (0xD800-0xDBFF) になるため false になり、Plane 15 のアイコンを取りこぼしていた。
+  逆に全角記号や CJK 互換漢字をアイコン扱いしてしまう。新しい `MD3Icon.IsIcon()` に置き換えた。
 - **`RefreshAllWindows` の責務混在** — 「開いているウィンドウにフォントを貼り直す」
   処理が `InvalidateAll()` 経由で「生成済みアトラスを全削除する」まで行っていたため、
   フォントのダウンロード完了・設定画面の操作・リトライのたびに 12 MB のアイコン
@@ -64,6 +72,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   踏まないよう「現在の入力で焼かれたもの」とみなして記録だけ引き継ぐ。
   古い世代を強制的に捨てたいときは従来どおり `MD3FontAssetStoreMigration.CurrentVersion`
   を上げる。
+- **焼き方そのものを入力ハッシュに含めた** — ハッシュが「元フォント + codepoint 集合」
+  だけだと、焼き方 (samplingPointSize / atlas サイズ / 使う API) を変えてもハッシュが
+  変わらず既存アセットが使われ続ける。実際この修正がそれを踏み、移行版数の手動バンプで
+  救う羽目になった。パラメータ定数から組み立てたレシピ文字列と `BakeFormatVersion` を
+  ハッシュに含めるようにしたので、今後のパラメータ変更は自動的に焼き直しへつながる。
 - **移行版数を 3 に更新** — 今回は codepoint 集合が実際に変わる (BMP 外の 51 個が加わる) ため、
   上記の「記録が無ければ現在の入力とみなす」挙動に任せると、v0.8.5 以前で焼かれた
   51 個欠けたままの atlas がそのまま採用されてしまう。移行版数を上げて 1 度だけ
@@ -72,6 +85,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `MD3Icon.IsIcon(string)` — 文字列が「アイコン 1 文字」かを判定する。
+  サロゲートペア (BMP 外) を正しく扱い、私用領域だけをアイコンとみなすので、
+  全角記号や CJK 互換漢字を誤ってアイコン扱いしない。
 - **未収録 codepoint の実行時警告** — atlas に入っていない codepoint が実際に
   描画されたとき、その codepoint につきセッション 1 回だけ `MD3Icon` を名指しで警告する。
   焼き時の警告だけでは「定数はあるのに atlas に入っていない」状態に気づけず、
@@ -82,8 +98,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Narrow Layout Probe** (`Window/紫陽花広場/MD3 SDK Diagnostics/`) —
   狭い幅でレイアウトが返ってこなくなる事象 (#4) の犯人を切り分ける検査ウィンドウ。
   素の Label から全部乗せまで 11 段階の構成を、幅を変えながら 1 つずつ開く。
-  ログはプロジェクト直下の `MD3SDK_LayoutProbe.log` に 1 行ずつ flush して書くので、
-  ハングして強制終了してもディスクに残る。ステップ番号は構築の前に進めて
+  ログは `Logs/MD3SDK_LayoutProbe.log` に 1 行ずつ flush して書くので、ハングして
+  強制終了してもディスクに残る (`Logs/` は Unity 標準の `.gitignore` に含まれるので
+  消費側のリポジトリを汚さない)。
+  warm と cold はステップ番号を別々に持つので、両方を最後まで通せる。ステップ番号は構築の前に進めて
   永続化するため、強制終了して開き直せば自動的に次の構成へ進む。
   `warm` は 400px から段階的に絞って「どの幅で落ちたか」を出し、
   `cold` は一度も広い幅を通さずいきなり 100px で開く
@@ -99,9 +117,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   各コンポーネントで必ずウォームアップを挟む (初回は USS の解決とグリフの焼き込みで
   桁違いに遅く、混ぜると計測順に依存した嘘が出るため)。
   幅を複数取り「比 (狭/広)」列を出すので、狭いウィンドウで急に重くなる
-  コンポーネントが上に来る。結果はソート可能な表と CSV
-  (`MD3SDK_ComponentBenchmark.csv`) で出力する。
-  進行状況は `MD3SDK_ComponentBenchmark.log` に 1 行ずつ flush して書くので、
+  コンポーネントが上に来る。幅ごとに新しいインスタンスを使う
+  (使い回すと 2 巡目以降はレイアウトがキャッシュされ、最初に測る幅だけが不当に遅く出て
+  「比」が水増しされる)。生成時間からはリフレクション呼び出しのぶんを差し引く。
+  結果はソート可能な表と CSV (`Logs/MD3SDK_ComponentBenchmark.csv`) で出力する。
+  進行状況は `Logs/MD3SDK_ComponentBenchmark.log` に 1 行ずつ flush して書くので、
   計測中にハングして強制終了しても、どのコンポーネントで止まったかが残る。
   既定 (確保量 off) で全 67 型が約 5 秒。確保量の計測は完全な GC を強制するため
   ヒープの大きいプロジェクトでは数分かかる。

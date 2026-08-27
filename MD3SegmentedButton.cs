@@ -69,7 +69,11 @@ namespace AjisaiFlow.MD3SDK.Editor
                 var lbl = new Label(labels[i]);
                 lbl.AddToClassList("md3-segmented__label");
                 lbl.pickingMode = PickingMode.Ignore;
-                if (labels[i].Length > 0 && labels[i][0] >= '\uE000')
+                // labels[i][0] >= '\uE000' という素朴な判定は、BMP 外のアイコンだと
+                // 先頭が上位サロゲート (0xD800-0xDBFF) になるため false になり、
+                // Plane 15 のアイコンを取りこぼす。逆に全角記号や CJK 互換漢字を
+                // アイコン扱いしてしまう。MD3Icon.IsIcon が両方を正しく判定する。
+                if (MD3Icon.IsIcon(labels[i]))
                     MD3Icon.Apply(lbl, 18f);
                 seg.Add(lbl);
                 _textLabels.Add(lbl);

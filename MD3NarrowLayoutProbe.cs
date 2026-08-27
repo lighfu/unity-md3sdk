@@ -29,7 +29,15 @@ namespace AjisaiFlow.MD3SDK.Editor
     /// </summary>
     public class MD3NarrowLayoutProbe : EditorWindow
     {
-        const string StepKey = "MD3SDK.NarrowLayoutProbe.NextStep";
+        // warm と cold でステップ番号を分ける。
+        // 共有すると、warm を最後まで回したあとに cold を実行しても
+        // 「全ステップ完走」ダイアログが出るだけで 1 度も開かず、
+        // 実際に issue #4 の条件を再現するモードが走らない。
+        // 交互に実行した場合も、1 つのカウンタが進むだけで各モードは
+        // 半分しか踏んでいないのにログ上は完走したように見える。
+        const string StepKeyPrefix = "MD3SDK.NarrowLayoutProbe.NextStep";
+
+        static string StepKey(bool cold) => StepKeyPrefix + (cold ? ".cold" : ".warm");
         const float ProbeHeight = 100f;
 
         // warm: 広いところから段階的に絞る。各段の直前にログを刻むので、
@@ -202,8 +210,17 @@ namespace AjisaiFlow.MD3SDK.Editor
 
         // ── ログ ──
 
-        static string LogPath =>
-            Path.GetFullPath(Path.Combine(Application.dataPath, "..", "MD3SDK_LayoutProbe.log"));
+        // 出力はプロジェクト直下ではなく Logs/ に置く。
+        // Logs/ は Unity 標準の .gitignore に含まれるので、消費側のリポジトリを汚さない。
+        static string LogPath
+        {
+            get
+            {
+                var dir = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "Logs"));
+                try { Directory.CreateDirectory(dir); } catch { /* 書けなければ Log 側で握る */ }
+                return Path.Combine(dir, "MD3SDK_LayoutProbe.log");
+            }
+        }
 
         /// <summary>1 行ごとに開いて閉じる。強制終了してもディスクに残す。</summary>
         static void Log(string line)
@@ -226,13 +243,14 @@ namespace AjisaiFlow.MD3SDK.Editor
         {
             var steps = BuildSteps();
             var ramp = cold ? ColdRamp : WarmRamp;
-            int step = EditorPrefs.GetInt(StepKey, 0);
+            var stepKey = StepKey(cold);
+            int step = EditorPrefs.GetInt(stepKey, 0);
 
             if (step >= steps.Count)
             {
                 EditorUtility.DisplayDialog(
                     "Narrow Layout Probe",
-                    "全 " + steps.Count + " ステップが完走しました。\n" +
+                    (cold ? "cold" : "warm") + " モードの全 " + steps.Count + " ステップが完走しました。\n" +
                     "この構成では再現していません。\n\n" +
                     "ログ: " + LogPath,
                     "OK");
@@ -242,7 +260,7 @@ namespace AjisaiFlow.MD3SDK.Editor
             // ★ 構築の前に次のステップを確定させる。
             //    こうしないと、ハング → 強制終了 → 再実行 で同じステップを
             //    永久に踏み直すことになる。
-            EditorPrefs.SetInt(StepKey, step + 1);
+            EditorPrefs.SetInt(stepKey, step + 1);
 
             var s = steps[step];
             Log("START  step=" + step + " (" + s.Name + ")  md3Theme=" + s.ApplyMd3Theme
@@ -269,8 +287,9 @@ namespace AjisaiFlow.MD3SDK.Editor
         [MenuItem("Window/紫陽花広場/MD3 SDK Diagnostics/Narrow Layout Probe (ステップをリセット)", false, 100)]
         public static void ResetSteps()
         {
-            EditorPrefs.SetInt(StepKey, 0);
-            Log("---- ステップをリセットしました ----");
+            EditorPrefs.SetInt(StepKey(false), 0);
+            EditorPrefs.SetInt(StepKey(true), 0);
+            Log("---- ステップをリセットしました (warm / cold 両方) ----");
         }
 
         [MenuItem("Window/紫陽花広場/MD3 SDK Diagnostics/Narrow Layout Probe (ログを開く)")]

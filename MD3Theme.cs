@@ -343,8 +343,14 @@ namespace AjisaiFlow.MD3SDK.Editor
             s_refreshRetryCount++;
             EditorApplication.delayCall += () =>
             {
-                try { MD3FontManager.RefreshAllWindows(); }
-                finally { s_refreshRetryScheduled = false; }
+                // フラグは処理の「前」に戻す。
+                // finally で戻すと、RefreshAllWindows の中から呼ばれる
+                // ScheduleRefreshRetry が「予約済み」と誤認して連鎖がそこで切れ、
+                // 上限 3 回が実質 1 回になってしまう。
+                // 旧実装の無限再武装は s_refreshRetryCount の上限が止めるので、
+                // ここで先に戻しても安全。
+                s_refreshRetryScheduled = false;
+                MD3FontManager.RefreshAllWindows();
             };
         }
 

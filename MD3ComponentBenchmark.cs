@@ -38,8 +38,19 @@ namespace AjisaiFlow.MD3SDK.Editor
         const string CsvName = "MD3SDK_ComponentBenchmark.csv";
         const string LogName = "MD3SDK_ComponentBenchmark.log";
 
-        static string LogPath =>
-            Path.GetFullPath(Path.Combine(Application.dataPath, "..", LogName));
+        // 出力はプロジェクト直下ではなく Logs/ に置く。
+        // Logs/ は Unity 標準の .gitignore に含まれるので、消費側のリポジトリを汚さない。
+        static string OutputDir
+        {
+            get
+            {
+                var dir = Path.GetFullPath(Path.Combine(Application.dataPath, "..", "Logs"));
+                try { Directory.CreateDirectory(dir); } catch { /* 書けなければ呼び出し側で握る */ }
+                return dir;
+            }
+        }
+
+        static string LogPath => Path.Combine(OutputDir, LogName);
 
         /// <summary>
         /// 1 行ごとに開いて閉じて書く。計測中にハングして強制終了しても、
@@ -214,25 +225,36 @@ namespace AjisaiFlow.MD3SDK.Editor
 
         // ── 計測 ──
 
+        /// <summary>
+        /// _statusLabel は _host と同じく CreateGUI で作られる。つまり _host が null の
+        /// ときは _statusLabel も null なので、素の代入では案内を出す代わりに
+        /// NullReferenceException になる。
+        /// </summary>
+        void SetStatus(string message)
+        {
+            if (_statusLabel != null) _statusLabel.text = message;
+            else Debug.LogWarning("[MD3Benchmark] " + message);
+        }
+
         void RunBenchmark()
         {
             if (_host == null || _host.panel == null)
             {
-                _statusLabel.text = "ホストが panel に載っていません。ウィンドウを開き直してください。";
+                SetStatus("ホストが panel に載っていません。ウィンドウを開き直してください。");
                 return;
             }
 
             _widths = ParseWidths(_widthsText);
             if (_widths.Length == 0)
             {
-                _statusLabel.text = "幅を 1 つ以上指定してください (例: 100, 300, 800)。";
+                SetStatus("幅を 1 つ以上指定してください (例: 100, 300, 800)。");
                 return;
             }
 
             var doLayout = ResolveLayoutInvoker(_host.panel);
             if (doLayout == null)
             {
-                _statusLabel.text = "ValidateLayout() を解決できませんでした。この Unity では計測できません。";
+                SetStatus("ValidateLayout() を解決できませんでした。この Unity では計測できません。");
                 return;
             }
 
@@ -288,8 +310,8 @@ namespace AjisaiFlow.MD3SDK.Editor
             }
 
             LogLine("==== run end ====");
-            _statusLabel.text = _rows.Count + " コンポーネント計測 / " + _skipped.Count + " 件スキップ"
-                + "  (繰り返し " + _iterations + " 回, 幅 " + string.Join("/", _widths.Select(w => w.ToString("F0"))) + ")";
+            SetStatus(_rows.Count + " コンポーネント計測 / " + _skipped.Count + " 件スキップ"
+                + "  (繰り返し " + _iterations + " 回, 幅 " + string.Join("/", _widths.Select(w => w.ToString("F0"))) + ")");
             BuildResultsTable();
         }
 
@@ -316,13 +338,18 @@ namespace AjisaiFlow.MD3SDK.Editor
             // 完全な GC を強制するので、ヒープの大きいプロジェクトでは非常に遅い。
             if (_measureAlloc)
             {
+                // 保持用の配列は計測の「前」に確保する。あとで確保すると
+                // 配列そのもの (8 * _iterations バイト) が結果に混ざる。
+                var allocSet = new VisualElement[_iterations];
                 GC.Collect();
                 GC.WaitForPendingFinalizers();
                 GC.Collect();
                 long before = GC.GetTotalMemory(true);
-                var allocSet = new VisualElement[_iterations];
                 for (int i = 0; i < _iterations; i++) allocSet[i] = factory();
-                long after = GC.GetTotalMemory(false);
+                // after も強制 GC 付きで読む。false のままだとコンストラクタが出した
+                // 一時ゴミが未回収のまま加算され、「1 インスタンスが生き残らせる大きさ」
+                // ではなく「実行中に触れた量」を測ってしまう。
+                long after = GC.GetTotalMemory(true);
                 row.AllocBytes = Math.Max(0, (after - before) / _iterations);
                 GC.KeepAlive(allocSet);
             }
@@ -332,12 +359,24 @@ namespace AjisaiFlow.MD3SDK.Editor
             }
 
             // ── 生成時間 ──
+            // ファクトリは ConstructorInfo.Invoke + OptionalParamBinding を通るので、
+            // 呼び出し 1 回あたり 1-3us のリフレクション費用が乗る。差し引かないと、
+            // MD3Spacer のように実作業が 1us 未満のコンポーネントは測定値のほぼ全部が
+            // リフレクション費用になり、表の順位が意味を失う。
+            // 素の VisualElement を同じ経路で作った時間をベースラインにする。
+            var baselineMade = new VisualElement[_iterations];
+            sw.Restart();
+            for (int i = 0; i < _iterations; i++) baselineMade[i] = BaselineFactory();
+            sw.Stop();
+            double ctorBaseline = sw.Elapsed.TotalMilliseconds;
+
             var made = new VisualElement[_iterations];
             sw.Restart();
             for (int i = 0; i < _iterations; i++) made[i] = factory();
             sw.Stop();
             GC.KeepAlive(made);
-            row.CtorUs = sw.Elapsed.TotalMilliseconds * 1000.0 / _iterations;
+            GC.KeepAlive(baselineMade);
+            row.CtorUs = Math.Max(0, sw.Elapsed.TotalMilliseconds - ctorBaseline) * 1000.0 / _iterations;
 
             // ── レイアウト時間 (幅ごと) ──
             for (int wi = 0; wi < _widths.Length; wi++)
@@ -409,6 +448,21 @@ namespace AjisaiFlow.MD3SDK.Editor
                     v.Add(new Label("Item " + i));
                 return v;
             };
+        }
+
+        static Func<VisualElement> s_baselineFactory;
+
+        /// <summary>計測対象と同じリフレクション経路で素の VisualElement を作るファクトリ。</summary>
+        static Func<VisualElement> BaselineFactory
+        {
+            get
+            {
+                if (s_baselineFactory != null) return s_baselineFactory;
+                var ctor = typeof(VisualElement).GetConstructor(Type.EmptyTypes);
+                var argv = new object[0];
+                return s_baselineFactory = () => (VisualElement)ctor.Invoke(
+                    BindingFlags.OptionalParamBinding, null, argv, CultureInfo.InvariantCulture);
+            }
         }
 
         static int CountElements(VisualElement ve)
@@ -633,11 +687,11 @@ namespace AjisaiFlow.MD3SDK.Editor
         {
             if (_rows.Count == 0)
             {
-                _statusLabel.text = "先に計測してください。";
+                SetStatus("先に計測してください。");
                 return;
             }
 
-            var path = Path.GetFullPath(Path.Combine(Application.dataPath, "..", CsvName));
+            var path = Path.Combine(OutputDir, CsvName);
             var sb = new System.Text.StringBuilder();
             sb.Append("component,payload_added,elements,ctor_us,alloc_bytes");
             foreach (var w in _widths) sb.Append(",layout_us_" + w.ToString("F0") + "px");
@@ -670,13 +724,13 @@ namespace AjisaiFlow.MD3SDK.Editor
             try
             {
                 File.WriteAllText(path, sb.ToString(), new System.Text.UTF8Encoding(true));
-                _statusLabel.text = "CSV を書きました: " + path;
+                SetStatus("CSV を書きました: " + path);
                 Debug.Log("[MD3Benchmark] CSV: " + path);
                 EditorUtility.RevealInFinder(path);
             }
             catch (Exception e)
             {
-                _statusLabel.text = "CSV を書けません: " + e.Message;
+                SetStatus("CSV を書けません: " + e.Message);
             }
         }
 

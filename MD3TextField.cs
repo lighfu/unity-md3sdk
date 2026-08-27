@@ -96,6 +96,7 @@ namespace AjisaiFlow.MD3SDK.Editor
                 {
                     EnsureLeadingIcon();
                     _leadingIcon.text = value;
+                    MD3Icon.CheckIcon(_leadingIcon);
                     _leadingIcon.style.display = DisplayStyle.Flex;
                 }
             }
@@ -114,6 +115,7 @@ namespace AjisaiFlow.MD3SDK.Editor
                 {
                     EnsureTrailingIcon();
                     _trailingIcon.text = value;
+                    MD3Icon.CheckIcon(_trailingIcon);
                     _trailingIcon.style.display = DisplayStyle.Flex;
                 }
             }
