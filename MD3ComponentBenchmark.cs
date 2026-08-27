@@ -336,6 +336,7 @@ namespace AjisaiFlow.MD3SDK.Editor
             sw.Restart();
             for (int i = 0; i < _iterations; i++) made[i] = factory();
             sw.Stop();
+            GC.KeepAlive(made);
             row.CtorUs = sw.Elapsed.TotalMilliseconds * 1000.0 / _iterations;
 
             // ── レイアウト時間 (幅ごと) ──
@@ -358,16 +359,24 @@ namespace AjisaiFlow.MD3SDK.Editor
                     doLayout();
                 }
 
+                // 幅ごとに新しいインスタンスを使う。
+                // 同じインスタンスを幅をまたいで使い回すと、2 巡目以降は
+                // レイアウト結果がキャッシュされて速く見え、最初に測った幅
+                // (幅は昇順なので最小幅) だけが不当に遅く出る。
+                // それでは「比 (狭/広)」が水増しされ、狭幅で重いものを
+                // 探すという目的そのものを損なう。
+                var set = new VisualElement[_iterations];
+                for (int i = 0; i < _iterations; i++) set[i] = factory();
+
                 double total = 0;
                 for (int i = 0; i < _iterations; i++)
                 {
-                    var inst = made[i];
-                    _host.Add(inst);
+                    _host.Add(set[i]);
                     sw.Restart();
                     doLayout();
                     sw.Stop();
                     total += sw.Elapsed.TotalMilliseconds;
-                    _host.Remove(inst);
+                    _host.Remove(set[i]);
                     doLayout();
                 }
 
