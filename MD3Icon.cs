@@ -16,29 +16,134 @@ namespace AjisaiFlow.MD3SDK.Editor
         static Font s_font;
         static FontAsset s_fontAsset;
 
-        /// <summary>フォントキャッシュをクリア。ダウンロード後に呼ぶと次回描画で再読み込みされる。</summary>
+        /// <summary>
+        /// フォントキャッシュをクリアし、生成済み FontAsset アセットも削除する。
+        /// アトラスが壊れた場合の手動復旧用。通常の再描画には <see cref="ResetCache"/>
+        /// (= MD3FontManager.RefreshAllWindows) で足りる。
+        /// </summary>
         public static void ClearCache()
+        {
+            ResetCache();
+            // atlas を作り直すと、これまで欠けていた codepoint が入るかもしれない。
+            // 警告履歴はここでだけ捨てる。
+            s_warnedMissing = null;
+            MD3FontAssetStore.InvalidateAll();
+        }
+
+        /// <summary>
+        /// static キャッシュだけを捨てる。生成済みアセットは消さない。
+        /// 元フォントや codepoint セットが変わった場合は MD3FontAssetStore 側の
+        /// 入力ハッシュ判定で自動的に焼き直されるため、再描画のたびに
+        /// 12MB の atlas を削除・再生成する必要はない。
+        /// </summary>
+        internal static void ResetCache()
         {
             s_font = null;
             s_fontAsset = null;
             s_filledFont = null;
             s_filledFontAsset = null;
-            MD3FontAssetStore.InvalidateAll();
+            // s_warnedMissing はここでは捨てない。ResetCache は RefreshAllWindows から
+            // 頻繁に呼ばれるため、ここで捨てると「セッション 1 回」のはずの警告が
+            // フォント DL・設定変更・リトライのたびに出てコンソールを埋める。
         }
 
-        /// <summary>このクラスの全 const string (Material Symbols PUA codepoint 群) を列挙する。</summary>
+        static HashSet<uint> s_warnedMissing;
+
+        /// <summary>
+        /// atlas に入っていない codepoint が実際に使われたら、その codepoint につき
+        /// セッション 1 回だけ警告する。
+        ///
+        /// 焼き時の警告だけでは「MD3Icon に定数はあるのに atlas には入っていない」状態に
+        /// 気づけない。実際にこれで BMP 外 (U+FFF7E 以降) のアイコン 51 個が
+        /// 長期間 □ のまま見過ごされていた。使われた瞬間に名指しするのがこの関数。
+        /// </summary>
+        static void WarnIfMissingIcon(VisualElement element, FontAsset atlas)
+        {
+            if (atlas == null) return;
+            var te = element as TextElement;
+            if (te == null) return;
+            CheckIcon(te, atlas);
+        }
+
+        /// <summary>
+        /// アイコンを差し替えたあとに呼ぶ。atlas に無ければセッション 1 回だけ警告する。
+        /// Apply() を通らない経路 (Icon プロパティの setter など) 用。
+        /// </summary>
+        internal static void CheckIcon(TextElement te)
+        {
+            if (te == null) return;
+            EnsureFont();
+            CheckIcon(te, s_fontAsset);
+        }
+
+        static void CheckIcon(TextElement te, FontAsset atlas)
+        {
+            if (atlas == null) return;
+
+            var text = te.text;
+            // アイコン 1 文字で、かつ Material Symbols が使う私用領域のときだけ見る。
+            // 「1 文字なら何でも」だと、MD3SegmentedButton のように全角記号や
+            // CJK 互換漢字にアイコンフォントを当てる経路で誤警告が出る。
+            if (!IsIcon(text)) return;
+
+            uint cp = (uint)char.ConvertToUtf32(text, 0);
+            if (atlas.HasCharacter(cp, true, false)) return;
+
+            if (s_warnedMissing == null) s_warnedMissing = new HashSet<uint>();
+            if (!s_warnedMissing.Add(cp)) return;
+
+            Debug.LogWarning(
+                $"[MD3Icon] codepoint U+{cp:X} はアイコン atlas に無いため □ で描画されます。" +
+                "atlas が古い場合は MD3FontManager.RebuildFontAssets() で直りますが、" +
+                "atlas に収まりきらなかった場合は焼き直しても同じ結果になります " +
+                "(その場合は生成時の警告に収録できなかった codepoint が出ています)。");
+        }
+
+        /// <summary>
+        /// 文字列が「アイコン 1 文字」かどうか。サロゲートペア (BMP 外) も正しく判定する。
+        ///
+        /// <c>s[0] >= '\uE000'</c> のような素朴な判定は、BMP 外のアイコンでは先頭が
+        /// 上位サロゲート (0xD800-0xDBFF) になるため false になり、Plane 15 のアイコンを
+        /// 取りこぼす。逆に全角記号や CJK 互換漢字を誤ってアイコン扱いしてしまう。
+        /// </summary>
+        public static bool IsIcon(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return false;
+            int len = char.IsHighSurrogate(s[0]) && s.Length > 1 && char.IsLowSurrogate(s[1]) ? 2 : 1;
+            if (s.Length != len) return false;
+
+            uint cp;
+            try { cp = (uint)char.ConvertToUtf32(s, 0); }
+            catch { return false; }
+
+            return (cp >= 0xE000 && cp <= 0xF8FF)        // BMP 私用領域
+                || (cp >= 0xF0000 && cp <= 0xFFFFD);     // Plane 15 私用領域
+        }
+
+        static string[] s_allIconCodepoints;
+
+        /// <summary>
+        /// このクラスの全 const string (Material Symbols PUA codepoint 群) を列挙する。
+        ///
+        /// 結果はコンパイル時定数から作られるのでドメイン内で変わらない。キャッシュしないと
+        /// EnsureFont と EnsureFilledFont のたびに 4000 回超の GetRawConstantValue が走り、
+        /// RefreshAllWindows のたびにそれが 2 セット繰り返される。
+        /// </summary>
         static IEnumerable<string> EnumerateAllIconCodepoints()
         {
-            var t = typeof(MD3Icon);
-            var fields = t.GetFields(System.Reflection.BindingFlags.Public |
-                                     System.Reflection.BindingFlags.Static);
+            if (s_allIconCodepoints != null) return s_allIconCodepoints;
+
+            var list = new List<string>(4300);
+            var fields = typeof(MD3Icon).GetFields(System.Reflection.BindingFlags.Public |
+                                                   System.Reflection.BindingFlags.Static);
             foreach (var f in fields)
             {
                 if (f.FieldType != typeof(string)) continue;
                 if (!f.IsLiteral || f.IsInitOnly) continue; // const のみ
                 var v = (string)f.GetRawConstantValue();
-                if (!string.IsNullOrEmpty(v)) yield return v;
+                if (!string.IsNullOrEmpty(v)) list.Add(v);
             }
+            return s_allIconCodepoints = list.ToArray();
         }
 
         // ── Material Symbols Icons (4211 icons from codepoints file) ──
@@ -4280,6 +4385,7 @@ namespace AjisaiFlow.MD3SDK.Editor
                 element.style.unityFont = s_font;
             element.style.fontSize = size;
             element.style.unityTextAlign = TextAnchor.MiddleCenter;
+            WarnIfMissingIcon(element, s_fontAsset);
         }
 
         /// <summary>
@@ -4314,7 +4420,31 @@ namespace AjisaiFlow.MD3SDK.Editor
             return iconName;
         }
 
+        // フォント未検出 / 生成失敗時の遅延リトライ。
+        // 旧実装は delayCall の中で s_retryScheduled を「処理の前に」false へ戻していたため、
+        // RefreshAllWindows -> Apply -> EnsureFont が「未スケジュール」と誤認して
+        // 毎 tick 際限なく再武装していた。1 回のリトライは InvalidateAll + 4211 codepoint の
+        // SDF 焼き直しを伴うため、これが CPU 張り付き・メモリ増加の増幅器になっていた。
+        // フラグは必ず処理後に戻し、さらに試行回数で頭を打つ。
+        const int MaxFontRetries = 3;
         static bool s_retryScheduled;
+        static int s_retryCount;
+
+        static void ScheduleFontRetry()
+        {
+            if (s_retryScheduled) return;
+            if (s_retryCount >= MaxFontRetries) return;
+
+            s_retryScheduled = true;
+            s_retryCount++;
+            EditorApplication.delayCall += () =>
+            {
+                // フラグは処理の「前」に戻す (理由は MD3Theme.ScheduleRefreshRetry と同じ)。
+                // 無限再武装は s_retryCount の上限が止める。
+                s_retryScheduled = false;
+                MD3FontManager.RefreshAllWindows();
+            };
+        }
 
         static void EnsureFont()
         {
@@ -4342,19 +4472,12 @@ namespace AjisaiFlow.MD3SDK.Editor
             if (s_fontAsset != null)
             {
                 s_retryScheduled = false;
+                s_retryCount = 0;
                 return;
             }
 
-            // フォント未検出 / 生成失敗 — AssetDatabase 準備中の可能性。1 回だけ遅延リトライ。
-            if (!s_retryScheduled)
-            {
-                s_retryScheduled = true;
-                EditorApplication.delayCall += () =>
-                {
-                    s_retryScheduled = false;
-                    MD3FontManager.RefreshAllWindows();
-                };
-            }
+            // フォント未検出 / 生成失敗 — AssetDatabase 準備中の可能性。上限つきで遅延リトライ。
+            ScheduleFontRetry();
         }
 
         // ── Filled (FILL=1) variant ──
@@ -4387,6 +4510,7 @@ namespace AjisaiFlow.MD3SDK.Editor
                 element.style.unityFont = s_filledFont;
             element.style.fontSize = size;
             element.style.unityTextAlign = TextAnchor.MiddleCenter;
+            WarnIfMissingIcon(element, s_filledFontAsset);
         }
 
         static void EnsureFilledFont()

@@ -284,7 +284,10 @@ namespace AjisaiFlow.MD3SDK.Editor
             set
             {
                 EditorPrefs.SetString("MD3SDK_ActiveFont", value);
-                MD3Theme.ClearFontCache();
+                // 生成アセットは消さない。テーマフォントが変われば MD3FontAssetStore が
+                // 入力ハッシュで検出して焼き直す。ClearFontCache() は InvalidateAll() 経由で
+                // アイコンアトラス (12MB / 4211 codepoint) まで巻き込んで削除してしまう。
+                MD3Theme.ResetFontCache();
             }
         }
 
@@ -321,7 +324,7 @@ namespace AjisaiFlow.MD3SDK.Editor
                             if (string.IsNullOrEmpty(ActiveFontPrefix))
                                 ActiveFontPrefix = capturedEntry.FontPrefix;
                             else
-                                MD3Theme.ClearFontCache(); // フォールバック再構築
+                                MD3Theme.ResetFontCache(); // フォールバック再構築 (memory-only)
                             AssetDatabase.Refresh();
                         }
                     }
@@ -478,7 +481,8 @@ namespace AjisaiFlow.MD3SDK.Editor
             set
             {
                 EditorPrefs.SetBool("MD3SDK_EmojiEnabled", value);
-                MD3Theme.ClearFontCache();
+                // fallback チェーンは memory-only なので貼り直すだけでよい。
+                MD3Theme.ResetFontCache();
             }
         }
 
@@ -583,13 +587,19 @@ namespace AjisaiFlow.MD3SDK.Editor
         }
 
         /// <summary>
-        /// フォントキャッシュをクリアし、全 EditorWindow を再描画する。
+        /// フォントの static キャッシュを捨て、全 EditorWindow に FontAsset を貼り直す。
         /// フォントダウンロード完了後に呼ぶとリアルタイムで UI が更新される。
+        ///
+        /// 生成済み FontAsset アセットは削除しない。元フォントや codepoint セットが
+        /// 変わっていれば MD3FontAssetStore が入力ハッシュで検出して焼き直すため、
+        /// ここで一律に削除すると、設定画面の操作やフォント DL 完了のたびに
+        /// 4211 codepoint の SDF 焼き直し (数分・メインスレッド同期) が走ってしまう。
+        /// 明示的に作り直したい場合は <see cref="RebuildFontAssets"/> を使う。
         /// </summary>
         public static void RefreshAllWindows()
         {
-            MD3Theme.ClearFontCache();
-            MD3Icon.ClearCache();
+            MD3Theme.ResetFontCache();
+            MD3Icon.ResetCache();
 
             // 全 EditorWindow の rootVisualElement に新しい FontAsset を再適用する。
             // (フォント設定変更後、新フォントを全 MD3 ウィンドウへ伝播させるため)
@@ -608,6 +618,16 @@ namespace AjisaiFlow.MD3SDK.Editor
 
                 w.Repaint();
             }
+        }
+
+        /// <summary>
+        /// 生成済み FontAsset アセットを全削除してから貼り直す。
+        /// アトラスが壊れた場合の手動復旧用。通常は <see cref="RefreshAllWindows"/> で足りる。
+        /// </summary>
+        public static void RebuildFontAssets()
+        {
+            MD3FontAssetStore.InvalidateAll();
+            RefreshAllWindows();
         }
 
         // ── 内部 ──

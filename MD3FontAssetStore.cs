@@ -26,6 +26,169 @@ namespace AjisaiFlow.MD3SDK.Editor
         const string ParentDir = "Assets/MD3SDKFonts";
         const string GeneratedDir = ParentDir + "/Generated";
 
+        // ── 生成アセットの入力ハッシュ ──
+        // アトラスに焼き込んだ「元フォント + 文字セット」を記録し、次回の要求と
+        // 一致しない場合だけ再生成する。記録先に AssetImporter.userData を使うと
+        // SaveAndReimport が走り UUM-69151 の ImportAsset 経路に触れてしまうため、
+        // AssetDatabase の外側 (EditorPrefs) に置く。
+        const string InputHashKeyPrefix = "MD3SDK.FontStore.InputHash:";
+
+        /// <summary>
+        /// 焼き方そのものを変えたときに上げる版数。
+        ///
+        /// 入力ハッシュが「元フォント + codepoint 集合」だけだと、焼き方を変えても
+        /// ハッシュが変わらず既存アセットが使われ続ける。実例として、
+        /// TryAddCharacters を string 版から uint[] 版に変えた修正は、焼かれる中身が
+        /// 変わったにもかかわらずハッシュ入力が同じだったため、既存環境には一切届かず、
+        /// migration の手動バンプで救う羽目になった。
+        /// レシピ文字列 (下の IconBakeRecipe / MainBakeRecipe) はパラメータ定数から
+        /// 組み立てるのでパラメータ変更は自動で反映される。この定数は「同じパラメータでも
+        /// 焼き方が変わった」ときに上げる。
+        /// </summary>
+        const int BakeFormatVersion = 2;
+
+        // アイコン atlas の焼き込みパラメータ。
+        // レシピ文字列にもそのまま入るので、ここを変えると入力ハッシュが変わり、
+        // 既存アセットは自動的に焼き直される。
+        const int IconSamplingPointSize = 50;
+        const int IconAtlasPadding = 4;
+        const int IconAtlasSize = 2048;
+
+        static string IconBakeRecipe =>
+            $"icon:sp{IconSamplingPointSize},pad{IconAtlasPadding}," +
+            $"{IconAtlasSize}x{IconAtlasSize},SDFAA,multi=1";
+
+        static string MainBakeRecipe => "main:CreateFontAsset(default)";
+
+        /// <summary>
+        /// main Static atlas に焼き込む文字セット (ASCII printable)。
+        /// 動的文字は全部 memory-only Dynamic fallback で受けるため、main はこれだけでよい。
+        /// </summary>
+        const string MainStaticCharacters =
+            " !\"#$%&'()*+,-./0123456789:;<=>?@" +
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`" +
+            "abcdefghijklmnopqrstuvwxyz{|}~";
+
+        static uint[] s_mainStaticCodepoints;
+
+        /// <summary><see cref="MainStaticCharacters"/> の codepoint 版 (遅延生成)。</summary>
+        static uint[] MainStaticCodepoints =>
+            s_mainStaticCodepoints ?? (s_mainStaticCodepoints = ToCodepoints(new[] { MainStaticCharacters }));
+
+        static string InputHashKey(string assetPath) =>
+            InputHashKeyPrefix + Hash128.Compute(Application.dataPath) + ":" + assetPath;
+
+        /// <summary>
+        /// 文字列群を重複なしの codepoint 配列に変換する (昇順)。
+        ///
+        /// 重要: FontAsset.TryAddCharacters(string) はサロゲートペアを 1 つの codepoint
+        /// として扱わず、UTF-16 単位 2 つを個別に探しに行って両方失敗する。
+        /// Material Symbols は U+FFF7E 以降 (Plane 15 の私用領域) にもアイコンを持つため、
+        /// string 版で焼くとそれらが 1 つも atlas に入らず、定数は存在するのに □ になる。
+        /// codepoint に直して uint[] 版を使えば正しく焼ける (実測で確認済み)。
+        ///
+        /// 昇順に並べるのは、リフレクションのフィールド順に依存せず入力ハッシュを
+        /// 安定させるため。
+        /// </summary>
+        static uint[] ToCodepoints(IEnumerable<string> strings)
+        {
+            var seen = new HashSet<uint>();
+            var list = new List<uint>(8192);
+            if (strings == null) return list.ToArray();
+
+            foreach (var s in strings)
+            {
+                if (string.IsNullOrEmpty(s)) continue;
+                for (int i = 0; i < s.Length; i++)
+                {
+                    uint cp;
+                    if (char.IsHighSurrogate(s[i]) && i + 1 < s.Length && char.IsLowSurrogate(s[i + 1]))
+                    {
+                        cp = (uint)char.ConvertToUtf32(s[i], s[i + 1]);
+                        i++;
+                    }
+                    else if (char.IsSurrogate(s[i]))
+                    {
+                        continue; // 片割れだけの壊れた文字は捨てる
+                    }
+                    else
+                    {
+                        cp = s[i];
+                    }
+                    if (seen.Add(cp)) list.Add(cp);
+                }
+            }
+            list.Sort();
+            return list.ToArray();
+        }
+
+        /// <summary>元フォントの GUID・焼き方・焼き込む codepoint 集合から入力ハッシュを作る。</summary>
+        static string ComputeInputHash(Font baseFont, uint[] codepoints, string recipe)
+        {
+            string fontId = baseFont == null ? "<null>" : baseFont.name;
+            if (baseFont != null &&
+                AssetDatabase.TryGetGUIDAndLocalFileIdentifier(baseFont, out string guid, out long _))
+                fontId = guid;
+
+            // codepoint をそのまま連結すると数万文字の文字列になるので FNV-1a で畳む。
+            ulong h = 14695981039346656037UL;
+            if (codepoints != null)
+            {
+                for (int i = 0; i < codepoints.Length; i++)
+                {
+                    ulong v = codepoints[i];
+                    for (int b = 0; b < 4; b++)
+                    {
+                        h ^= (v >> (b * 8)) & 0xFF;
+                        h *= 1099511628211UL;
+                    }
+                }
+            }
+            int count = codepoints == null ? 0 : codepoints.Length;
+            return Hash128.Compute(
+                fontId + "|v" + BakeFormatVersion + "|" + recipe + "|" + count + "|" + h.ToString("x16")).ToString();
+        }
+
+        /// <summary>警告用に codepoint を U+XXXX 形式で並べる (先頭 max 件まで)。</summary>
+        static string FormatCodepoints(uint[] codepoints, int max)
+        {
+            if (codepoints == null || codepoints.Length == 0) return "(なし)";
+            var parts = new List<string>(Mathf.Min(max, codepoints.Length));
+            for (int i = 0; i < codepoints.Length && i < max; i++)
+                parts.Add("U+" + codepoints[i].ToString("X"));
+            var text = string.Join(", ", parts);
+            if (codepoints.Length > max) text += " ほか " + (codepoints.Length - max) + " 件";
+            return text;
+        }
+
+        /// <summary>
+        /// 既存アセットが現在の入力で焼かれたものかを判定する。
+        /// 記録が無い場合 (= このバージョンより前に焼かれたアセット) は現在の入力で
+        /// 焼かれたものとみなして記録だけ引き継ぐ。ここで一律に焼き直すと、
+        /// 全ユーザーがアップグレード直後に 4211 glyph の再生成を 1 度踏むことになる。
+        /// 古い世代を強制的に捨てたいときは MD3FontAssetStoreMigration.CurrentVersion を上げる。
+        /// </summary>
+        static bool InputHashMatches(string assetPath, string wantHash)
+        {
+            var prefsKey = InputHashKey(assetPath);
+            var stored = EditorPrefs.GetString(prefsKey, string.Empty);
+            if (string.IsNullOrEmpty(stored))
+            {
+                EditorPrefs.SetString(prefsKey, wantHash);
+                return true;
+            }
+            return stored == wantHash;
+        }
+
+        /// <summary>永続化に成功したときだけ入力ハッシュを確定させる。</summary>
+        static void StoreInputHash(string assetPath, string wantHash)
+        {
+            if (AssetDatabase.LoadAssetAtPath<FontAsset>(assetPath) != null)
+                EditorPrefs.SetString(InputHashKey(assetPath), wantHash);
+            else
+                EditorPrefs.DeleteKey(InputHashKey(assetPath));
+        }
+
         /// <summary>
         /// 永続化された Static main FontAsset を返す。動的 fallback は memory-only で
         /// 都度生成し main.fallbackFontAssetTable にランタイム代入する (シリアライズしない)。
@@ -40,42 +203,56 @@ namespace AjisaiFlow.MD3SDK.Editor
             // 動的 fallback は毎回 memory-only で作り直す (ドメインリロードで消える前提)
             // 重要: SetDirty / SaveAssetIfDirty を呼ばない (シリアライズしないため
             //       main の artifactId は変化しない = WARN 発生条件を踏まない)
-            if (fallbackFonts != null && fallbackFonts.Count > 0)
-            {
-                // ScriptableObject 派生の FontAsset は HideFlags.DontSave だと GC で
-                // ネイティブ側 (atlas/glyph table) が解放されないので、自前で
-                // DestroyImmediate して native leak を防ぐ。
-                // ただし repaint 中に TextCore が古い fallback の native ポインタを
-                // 参照している可能性があるため、まずテーブルを差し替えて参照を切り、
-                // 古いインスタンスの destroy は 1 tick 遅延させる。
-                var stale = main.fallbackFontAssetTable;
+            // ScriptableObject 派生の FontAsset は HideFlags.DontSave だと GC で
+            // ネイティブ側 (atlas/glyph table) が解放されないので、自前で
+            // DestroyImmediate して native leak を防ぐ。
+            // ただし repaint 中に TextCore が古い fallback の native ポインタを
+            // 参照している可能性があるため、まずテーブルを差し替えて参照を切り、
+            // 古いインスタンスの destroy は 1 tick 遅延させる。
+            //
+            // 注意: fallbackFonts が空でも必ず差し替える。
+            // 以前は RefreshAllWindows が InvalidateAll 経由で main ごと削除していたため
+            // 空になれば自然に消えていたが、削除しなくなった今は明示的に空テーブルを
+            // 入れないと、無効にしたはずの fallback (例: Emoji を off にした場合) が
+            // main.fallbackFontAssetTable に残り続けて描画され続ける。
+            var stale = main.fallbackFontAssetTable;
 
-                var table = new List<FontAsset>(fallbackFonts.Count);
+            var table = new List<FontAsset>(fallbackFonts == null ? 0 : fallbackFonts.Count);
+            if (fallbackFonts != null)
+            {
                 foreach (var fb in fallbackFonts)
                 {
                     if (fb == null) continue;
                     var dyn = CreateMemoryOnlyDynamicFallback(fb);
                     if (dyn != null) table.Add(dyn);
                 }
-                main.fallbackFontAssetTable = table;
-
-                if (stale != null)
-                    EditorApplication.delayCall += () => DestroyMemoryOnlyFallbacks(stale);
             }
+            main.fallbackFontAssetTable = table;
+
+            if (stale != null)
+                EditorApplication.delayCall += () => DestroyMemoryOnlyFallbacks(stale);
+
             return main;
         }
 
         /// <summary>
         /// アイコン用 Static FontAsset を返す。指定した codepoint 文字列群を事前焼きしてから
-        /// Static 固定する。同じ key・同じ codepoint セットなら 2 回目以降はディスクから返す。
+        /// Static 固定する。同じ key・同じ元フォント・同じ codepoint セットなら
+        /// 2 回目以降はディスクから返す。いずれかが変わっていれば作り直す。
         /// </summary>
         public static FontAsset GetOrCreateIconFont(string key, Font iconFont, IEnumerable<string> codepointStrings)
         {
             if (iconFont == null) return null;
             var path = $"{GeneratedDir}/MD3_FA_{Sanitize(key)}.asset";
 
+            // 焼き込む codepoint を先に確定させ、入力ハッシュを取る。
+            var codepoints = ToCodepoints(codepointStrings);
+            string inputHash = ComputeInputHash(iconFont, codepoints, IconBakeRecipe);
+
             var existing = AssetDatabase.LoadAssetAtPath<FontAsset>(path);
-            if (existing != null && !IsBroken(existing) && existing.atlasPopulationMode == AtlasPopulationMode.Static)
+            if (existing != null && !IsBroken(existing)
+                && existing.atlasPopulationMode == AtlasPopulationMode.Static
+                && InputHashMatches(path, inputHash))
                 return existing;
             if (existing != null)
                 AssetDatabase.DeleteAsset(path);
@@ -90,11 +267,11 @@ namespace AjisaiFlow.MD3SDK.Editor
                 // 影響を受けにくい (UI の icon は 16-24px 程度で描画される)。
                 fa = FontAsset.CreateFontAsset(
                     iconFont,
-                    samplingPointSize: 50,
-                    atlasPadding: 4,
+                    samplingPointSize: IconSamplingPointSize,
+                    atlasPadding: IconAtlasPadding,
                     renderMode: UnityEngine.TextCore.LowLevel.GlyphRenderMode.SDFAA,
-                    atlasWidth: 2048,
-                    atlasHeight: 2048,
+                    atlasWidth: IconAtlasSize,
+                    atlasHeight: IconAtlasSize,
                     atlasPopulationMode: AtlasPopulationMode.Dynamic,
                     enableMultiAtlasSupport: true);
             }
@@ -109,25 +286,23 @@ namespace AjisaiFlow.MD3SDK.Editor
             // 注意: default の atlas は 1024x1024 で、Material Symbols 4000+ codepoint は
             //       1 ページに収まらず silently drop される (= 一部アイコンが □ 表示)。
             //       isMultiAtlasTexturesEnabled = true で overflow を別 atlas に逃がす。
-            if (codepointStrings != null)
+            if (codepoints.Length > 0)
             {
-                var sb = new System.Text.StringBuilder(8192);
-                foreach (var s in codepointStrings)
-                    if (!string.IsNullOrEmpty(s)) sb.Append(s);
-                if (sb.Length > 0)
+                // string 版ではなく uint[] 版を使う (サロゲートペア対応。ToCodepoints 参照)。
+                if (!fa.TryAddCharacters(codepoints, out uint[] missing, false) &&
+                    missing != null && missing.Length > 0)
                 {
-                    if (!fa.TryAddCharacters(sb.ToString(), out string missing) &&
-                        !string.IsNullOrEmpty(missing))
-                    {
-                        Debug.LogWarning(
-                            $"[MD3FontAssetStore] Icon atlas could not contain all codepoints " +
-                            $"for '{key}'. Missing {missing.Length} codepoint(s). " +
-                            $"Consider further reducing samplingPointSize or splitting the icon font.");
-                    }
+                    Debug.LogWarning(
+                        $"[MD3FontAssetStore] '{key}' のアイコン atlas に " +
+                        $"{codepoints.Length} 個中 {missing.Length} 個の codepoint を収録できませんでした: " +
+                        $"{FormatCodepoints(missing, 8)}。" +
+                        $"samplingPointSize を下げるか、アイコンフォントを分割してください。");
                 }
             }
             fa.atlasPopulationMode = AtlasPopulationMode.Static;
-            return PersistAsSubassetBundle(fa, path, $"MD3_FA_{Sanitize(key)}");
+            var persisted = PersistAsSubassetBundle(fa, path, $"MD3_FA_{Sanitize(key)}");
+            StoreInputHash(path, inputHash);
+            return persisted;
         }
 
         /// <summary>生成済みアセットを全削除する。フォント設定変更時に呼ぶ。</summary>
@@ -136,7 +311,11 @@ namespace AjisaiFlow.MD3SDK.Editor
             if (!AssetDatabase.IsValidFolder(GeneratedDir)) return;
             var guids = AssetDatabase.FindAssets("t:FontAsset", new[] { GeneratedDir });
             foreach (var guid in guids)
-                AssetDatabase.DeleteAsset(AssetDatabase.GUIDToAssetPath(guid));
+            {
+                var path = AssetDatabase.GUIDToAssetPath(guid);
+                EditorPrefs.DeleteKey(InputHashKey(path));
+                AssetDatabase.DeleteAsset(path);
+            }
         }
 
         // ── 内部 ──
@@ -145,8 +324,15 @@ namespace AjisaiFlow.MD3SDK.Editor
         {
             var path = $"{GeneratedDir}/MD3_FA_{Sanitize(key)}.asset";
 
+            // key は "theme" 固定なので、テーマフォントを差し替えても path は変わらない。
+            // 元フォントを含む入力ハッシュで判定しないと、古いフォントで焼いた atlas を
+            // 使い続けてしまう。
+            string inputHash = ComputeInputHash(baseFont, MainStaticCodepoints, MainBakeRecipe);
+
             var existing = AssetDatabase.LoadAssetAtPath<FontAsset>(path);
-            if (existing != null && !IsBroken(existing) && existing.atlasPopulationMode == AtlasPopulationMode.Static)
+            if (existing != null && !IsBroken(existing)
+                && existing.atlasPopulationMode == AtlasPopulationMode.Static
+                && InputHashMatches(path, inputHash))
                 return existing;
             if (existing != null)
                 AssetDatabase.DeleteAsset(path);
@@ -163,13 +349,11 @@ namespace AjisaiFlow.MD3SDK.Editor
             // main は空 Static でよい (動的文字は全部 fallback で受ける)
             // ただし atlas を完全に空にすると一部 Unity 内部処理が走らないので
             // ASCII printable を 1 度だけ焼いておく
-            fa.TryAddCharacters(
-                " !\"#$%&'()*+,-./0123456789:;<=>?@" +
-                "ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`" +
-                "abcdefghijklmnopqrstuvwxyz{|}~",
-                out _);
+            fa.TryAddCharacters(MainStaticCodepoints, out uint[] _, false);
             fa.atlasPopulationMode = AtlasPopulationMode.Static;
-            return PersistAsSubassetBundle(fa, path, $"MD3_FA_{Sanitize(key)}");
+            var persisted = PersistAsSubassetBundle(fa, path, $"MD3_FA_{Sanitize(key)}");
+            StoreInputHash(path, inputHash);
+            return persisted;
         }
 
         static FontAsset PersistAsSubassetBundle(FontAsset fa, string path, string baseName)
@@ -290,10 +474,40 @@ namespace AjisaiFlow.MD3SDK.Editor
             try
             {
                 if (fa == null || !fa) return true;
-                if (fa.atlasTextures == null || fa.atlasTextures.Length == 0) return true;
-                for (int i = 0; i < fa.atlasTextures.Length; i++)
+                var textures = fa.atlasTextures;
+                if (textures == null || textures.Length == 0) return true;
+
+                // TextCore は multi-atlas を拡張するとき m_AtlasTextures を実使用枚数より
+                // 大きく確保するため、末尾のスロットは正常な状態でも null のまま残る
+                // (例: 3 枚使用 → 配列長 4)。これを「壊れている」と判定すると multi-atlas な
+                // アイコンフォントは毎回キャッシュミスして削除・再生成され、4000+ codepoint の
+                // SDF 焼き直し (数分・メインスレッド同期) がウィンドウを開くたびに走る。
+                //
+                // 実使用枚数は atlasTextureCount (= m_AtlasTextureIndex + 1) が返す。
+                // m_AtlasTextureIndex は [SerializeField] なのでロード後も有効。
+                // 「最後の非 null スロットまでを検査する」ヒューリスティックでは、
+                // 最終ページの sub-asset が失われたケース ([t0, t1, null, null] で
+                // atlasTextureCount == 3) を健全と誤判定してしまう。
+                int used = Mathf.Clamp(fa.atlasTextureCount, 1, textures.Length);
+
+                // atlasTextureCount だけを信じると、m_AtlasTextureIndex が壊れて小さく
+                // 読めた場合に失われたページを見逃す。glyph が実際に参照している
+                // atlas index も見て、必要な枚数を引き上げる。
+                var glyphs = fa.glyphTable;
+                if (glyphs != null)
                 {
-                    var tex = fa.atlasTextures[i];
+                    for (int i = 0; i < glyphs.Count; i++)
+                    {
+                        int ai = (int)glyphs[i].atlasIndex;
+                        if (ai < 0) continue;
+                        if (ai >= textures.Length) return true; // 配列に収まらない参照 = 破損
+                        if (ai + 1 > used) used = ai + 1;
+                    }
+                }
+
+                for (int i = 0; i < used; i++)
+                {
+                    var tex = textures[i];
                     if (tex == null || !tex) return true;
                 }
                 return false;
@@ -333,7 +547,11 @@ namespace AjisaiFlow.MD3SDK.Editor
     [InitializeOnLoad]
     static class MD3FontAssetStoreMigration
     {
-        const int CurrentVersion = 2;
+        // v3: BMP 外 (サロゲートペア) の codepoint が 1 つも焼かれていなかった不具合の修正。
+        //     入力ハッシュの記録が無い既存アセットは InputHashMatches が「現在の入力で
+        //     焼かれたもの」として採用するため、放置すると v0.8.5 以前で焼かれた
+        //     51 個欠けたままの atlas が使われ続ける。ここで 1 度だけ確実に捨てる。
+        const int CurrentVersion = 3;
         const string KeyPrefix = "MD3SDK.FontStore.MigrationVersion:";
 
         static MD3FontAssetStoreMigration()

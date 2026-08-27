@@ -300,28 +300,55 @@ namespace AjisaiFlow.MD3SDK.Editor
             return null;
         }
 
+        /// <summary>
+        /// static キャッシュをクリアし、永続化済みの生成 FontAsset アセットも削除する。
+        /// アトラスが壊れた場合の手動復旧用。
+        /// </summary>
         public static void ClearFontCache()
         {
-            // フォント設定変更時に呼ばれる。static キャッシュをクリアし、
-            // 永続化済みの生成 FontAsset アセットも削除して再生成を促す。
-            s_fontAsset = null;
-            s_font = null;
+            ResetFontCache();
             MD3FontAssetStore.InvalidateAll();
         }
 
+        /// <summary>
+        /// static キャッシュだけを捨てる。生成済みアセットは消さない。
+        /// 元フォントが変わった場合は MD3FontAssetStore 側の入力ハッシュ判定で
+        /// 自動的に焼き直される。
+        /// </summary>
+        internal static void ResetFontCache()
+        {
+            s_fontAsset = null;
+            s_font = null;
+        }
+
+        // 旧実装は delayCall の中で s_refreshRetryScheduled を「処理の前に」false へ戻して
+        // いたため、RefreshAllWindows -> LoadFontAsset が「未スケジュール」と誤認して
+        // 毎 tick 際限なく再武装していた。フラグは必ず処理後に戻し、試行回数で頭を打つ。
+        const int MaxRefreshRetries = 3;
         static bool s_refreshRetryScheduled;
+        static int s_refreshRetryCount;
 
         /// <summary>
         /// FontAsset の生成に失敗した場合 (AssetDatabase 準備中・atlas 半壊など) に
-        /// 1 回だけ遅延リトライを登録する。次の editor tick で RefreshAllWindows を実行し、
+        /// 遅延リトライを登録する。次の editor tick で RefreshAllWindows を実行し、
         /// 全ウィンドウに fresh な FontAsset を再割り当てする。
+        /// 成功するまで最大 <see cref="MaxRefreshRetries"/> 回。
         /// </summary>
         static void ScheduleRefreshRetry()
         {
             if (s_refreshRetryScheduled) return;
+            if (s_refreshRetryCount >= MaxRefreshRetries) return;
+
             s_refreshRetryScheduled = true;
+            s_refreshRetryCount++;
             EditorApplication.delayCall += () =>
             {
+                // フラグは処理の「前」に戻す。
+                // finally で戻すと、RefreshAllWindows の中から呼ばれる
+                // ScheduleRefreshRetry が「予約済み」と誤認して連鎖がそこで切れ、
+                // 上限 3 回が実質 1 回になってしまう。
+                // 旧実装の無限再武装は s_refreshRetryCount の上限が止めるので、
+                // ここで先に戻しても安全。
                 s_refreshRetryScheduled = false;
                 MD3FontManager.RefreshAllWindows();
             };
@@ -366,6 +393,7 @@ namespace AjisaiFlow.MD3SDK.Editor
             }
 
             s_fontAsset = fa;
+            s_refreshRetryCount = 0;
             return s_fontAsset;
         }
 

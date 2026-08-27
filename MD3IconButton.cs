@@ -47,7 +47,10 @@ namespace AjisaiFlow.MD3SDK.Editor
                 if (_selected == value) return;
                 _selected = value;
                 if (_isToggle)
+                {
                     _icon.text = _selected ? _selectedIcon : _unselectedIcon;
+                    MD3Icon.CheckIcon(_icon);
+                }
                 ApplyColors();
                 toggled?.Invoke(_selected);
             }
@@ -65,6 +68,8 @@ namespace AjisaiFlow.MD3SDK.Editor
                     if (_selected) _selectedIcon = value;
                     else _unselectedIcon = value;
                 }
+                // Apply() を通らない経路なので、ここで未収録 codepoint を検出する
+                MD3Icon.CheckIcon(_icon);
             }
         }
 
@@ -103,6 +108,7 @@ namespace AjisaiFlow.MD3SDK.Editor
             _selectedIcon = selectedIcon;
             _selected = selected;
             _icon.text = _selected ? _selectedIcon : _unselectedIcon;
+            MD3Icon.CheckIcon(_icon);
             ApplyColors();
             return this;
         }

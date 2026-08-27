@@ -50,6 +50,7 @@ namespace AjisaiFlow.MD3SDK.Editor
                 {
                     EnsureIcon();
                     _icon.text = value;
+                    MD3Icon.CheckIcon(_icon);
                     _icon.style.display = DisplayStyle.Flex;
                 }
             }

@@ -5,6 +5,127 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.6] - 2026-08-27
+
+`MD3Icon` を使うウィンドウを開くたびにエディターが数分間フリーズする問題 (#3) の修正。
+アイコンアトラスのキャッシュが常にミスしていた根本原因に加えて、1 回のミスを
+数分の停止に増幅していた 3 つの経路をあわせて塞いだ。
+
+### Fixed
+
+- **BMP 外のアイコン 51 個が焼かれていなかった** — `FontAsset.TryAddCharacters(string)` は
+  サロゲートペアを 1 つの codepoint として扱わず、UTF-16 単位 2 つを個別に探して
+  両方失敗する (実測: `uint[]` 版なら `ok=True`、`string` 版は `ok=False, missing=2`)。
+  Material Symbols は U+FFF7E 以降 (Plane 15 の私用領域) にもアイコンを持つため、
+  `HomeStorageGear` `TranslateSubtitles` `TranslateCc` `FrameSpark` `AppSpark`
+  `YoutubeVideo` `CheckAlert` `CodeXml` `SpaceDashboard2` `GridLayoutSide` など
+  **51 個の公開定数が定義されているのに □ で描画されていた**。
+  codepoint 配列に変換して `TryAddCharacters(uint[], out uint[], bool)` を使うように変更。
+  グリフ自体はフォントに存在しており、フォントの差し替えは不要。
+  実測で `MD3_FA_icon.asset` の収録数が 3860 → 3911 (= `MD3Icon` のユニーク codepoint 全数)、
+  欠落 51 → 0 になることを確認済み。入力ハッシュが変わるため、既存環境でも
+  次回の描画で自動的に焼き直される。
+- **アトラスのキャッシュ判定 (根本原因)** — `MD3Icon` の 4211 codepoint は
+  2048x2048 の atlas 3 枚に収まるが、TextCore は multi-atlas を拡張するとき
+  `m_AtlasTextures` を実使用枚数より大きく確保するため、末尾のスロットは正常な
+  状態でも `null` のまま残る (3 枚使用 → 配列長 4)。`IsBroken()` はこの正常な
+  末尾 `null` を破損と誤判定していたため、永続化した 12 MB のアセットが毎回
+  `DeleteAsset` され、4211 glyph の SDF 焼き直し (実測 5 分以上、メインスレッド同期) が
+  `CreateGUI` の中で走っていた。実使用枚数を返す `FontAsset.atlasTextureCount`
+  (= `m_AtlasTextureIndex + 1`、`[SerializeField]` なのでロード後も有効) で
+  `0 .. atlasTextureCount-1` だけを検査するように変更。
+  atlas 1 枚の `MD3_FA_theme.asset` は配列長 1 で `null` を含まないためこの問題を
+  踏まず、2026-05-24 の生成以降ずっとキャッシュが効いていた。
+- **無制限の遅延リトライ** — `MD3Icon.EnsureFont` と `MD3Theme.ScheduleRefreshRetry` は
+  「1 回だけリトライ」するはずが、`delayCall` の中で「済み」フラグを処理の *前* に
+  戻していたため、`RefreshAllWindows` → `EnsureFont` が未スケジュールと誤認して
+  毎 tick 際限なく再武装していた。1 回のリトライが `InvalidateAll` + 全 codepoint の
+  焼き直しを伴うため、フォントが見つからない間ずっと CPU を焼き続けることになる。
+  フラグを処理後に戻し、成功するまで最大 3 回で頭を打つようにした。
+- **無効にした fallback が残り続けていた** — `GetOrCreate` は fallback リストが
+  空でないときしか `fallbackFontAssetTable` を作り直しておらず、`RefreshAllWindows` が
+  main アセットを削除しなくなったことで、Emoji を off にしても古い fallback が
+  繋がったままになっていた。空でも必ず差し替える。
+- **BMP 外アイコンにアイコンフォントが当たっていなかった** — `MD3SegmentedButton` の
+  `labels[i][0] >= '\uE000'` という判定は、BMP 外のアイコンだと先頭が上位サロゲート
+  (0xD800-0xDBFF) になるため false になり、Plane 15 のアイコンを取りこぼしていた。
+  逆に全角記号や CJK 互換漢字をアイコン扱いしてしまう。新しい `MD3Icon.IsIcon()` に置き換えた。
+- **`RefreshAllWindows` の責務混在** — 「開いているウィンドウにフォントを貼り直す」
+  処理が `InvalidateAll()` 経由で「生成済みアトラスを全削除する」まで行っていたため、
+  フォントのダウンロード完了・設定画面の操作・リトライのたびに 12 MB のアイコン
+  アトラスが焼き直されていた。`RefreshAllWindows` は static キャッシュを捨てて
+  貼り直すだけに変更。Emoji のオン/オフやテーマフォントの切り替えでアイコン
+  アトラスを巻き込むこともなくなった。
+
+### Changed
+
+- **生成アセットが内容アドレスになった** — 生成した FontAsset に「元フォントの GUID +
+  焼き込んだ文字セット」のハッシュを記録し、要求が変わったときだけ焼き直すようにした。
+  これまで `GetOrCreateIconFont` はパスの存在だけを見ており、docstring が約束していた
+  「同じ codepoint セットなら」の判定を実際には行っていなかったため、`MD3Icon` に
+  アイコンを追加しても `MD3FontAssetStoreMigration.CurrentVersion` を手で上げない限り
+  古いアトラスが使われ続けた。テーマ側も key が `"theme"` 固定のため、フォントを
+  差し替えても同じ穴があった。
+  記録先は `EditorPrefs`。`AssetImporter.userData` を使うと `SaveAndReimport` が走り、
+  この設計が回避している UUM-69151 の `ImportAsset` 経路に触れてしまうため。
+  既存の生成アセットは記録が無いので、アップグレード直後に全ユーザーが焼き直しを
+  踏まないよう「現在の入力で焼かれたもの」とみなして記録だけ引き継ぐ。
+  古い世代を強制的に捨てたいときは従来どおり `MD3FontAssetStoreMigration.CurrentVersion`
+  を上げる。
+- **焼き方そのものを入力ハッシュに含めた** — ハッシュが「元フォント + codepoint 集合」
+  だけだと、焼き方 (samplingPointSize / atlas サイズ / 使う API) を変えてもハッシュが
+  変わらず既存アセットが使われ続ける。実際この修正がそれを踏み、移行版数の手動バンプで
+  救う羽目になった。パラメータ定数から組み立てたレシピ文字列と `BakeFormatVersion` を
+  ハッシュに含めるようにしたので、今後のパラメータ変更は自動的に焼き直しへつながる。
+- **移行版数を 3 に更新** — 今回は codepoint 集合が実際に変わる (BMP 外の 51 個が加わる) ため、
+  上記の「記録が無ければ現在の入力とみなす」挙動に任せると、v0.8.5 以前で焼かれた
+  51 個欠けたままの atlas がそのまま採用されてしまう。移行版数を上げて 1 度だけ
+  確実に捨てる。実測で、更新時にドメインリロードで migration が発火して旧アセットを削除し、
+  次の描画で 5.8 秒かけて 3911 codepoint に焼き直されることを確認済み。
+
+### Added
+
+- `MD3Icon.IsIcon(string)` — 文字列が「アイコン 1 文字」かを判定する。
+  サロゲートペア (BMP 外) を正しく扱い、私用領域だけをアイコンとみなすので、
+  全角記号や CJK 互換漢字を誤ってアイコン扱いしない。
+- **未収録 codepoint の実行時警告** — atlas に入っていない codepoint が実際に
+  描画されたとき、その codepoint につきセッション 1 回だけ `MD3Icon` を名指しで警告する。
+  焼き時の警告だけでは「定数はあるのに atlas に入っていない」状態に気づけず、
+  実際に上記の 51 個が長期間見過ごされていた。アイコン 1 文字のときだけ判定するので、
+  通常の文章にアイコンフォントを当てた場合は警告しない。
+- `MD3FontManager.RebuildFontAssets()` — 生成済み FontAsset を全削除してから貼り直す。
+  アトラスが壊れた場合の手動復旧用。通常は `RefreshAllWindows()` で足りる。
+- **Narrow Layout Probe** (`Window/紫陽花広場/MD3 SDK Diagnostics/`) —
+  狭い幅でレイアウトが返ってこなくなる事象 (#4) の犯人を切り分ける検査ウィンドウ。
+  素の Label から全部乗せまで 11 段階の構成を、幅を変えながら 1 つずつ開く。
+  ログは `Logs/MD3SDK_LayoutProbe.log` に 1 行ずつ flush して書くので、ハングして
+  強制終了してもディスクに残る (`Logs/` は Unity 標準の `.gitignore` に含まれるので
+  消費側のリポジトリを汚さない)。
+  warm と cold はステップ番号を別々に持つので、両方を最後まで通せる。ステップ番号は構築の前に進めて
+  永続化するため、強制終了して開き直せば自動的に次の構成へ進む。
+  `warm` は 400px から段階的に絞って「どの幅で落ちたか」を出し、
+  `cold` は一度も広い幅を通さずいきなり 100px で開く
+  (`EditorWindow` の既定 minSize が 100x100 なので、`minSize` を設定していない
+  ウィンドウの初回レイアウトはこの幅になる)。
+- **Component Benchmark** (`Window/紫陽花広場/MD3 SDK Diagnostics/Component Benchmark`) —
+  SDK の全コンポーネントを一括計測するベンチマーク。アセンブリ内の public な
+  `VisualElement` 派生型をリフレクションで列挙するので、コンポーネントを追加しても
+  自動的に対象に入る (67 型を計測、引数なしで生成できない 2 型のみスキップ)。
+  測るのは 1 インスタンスあたりの生成時間・幅ごとのレイアウト時間・要素数、
+  および任意で確保量。レイアウトは `EditorPanel.ValidateLayout()` を直接呼んで
+  同期実行し、空のホストで同じ操作をした時間を差し引く。
+  各コンポーネントで必ずウォームアップを挟む (初回は USS の解決とグリフの焼き込みで
+  桁違いに遅く、混ぜると計測順に依存した嘘が出るため)。
+  幅を複数取り「比 (狭/広)」列を出すので、狭いウィンドウで急に重くなる
+  コンポーネントが上に来る。幅ごとに新しいインスタンスを使う
+  (使い回すと 2 巡目以降はレイアウトがキャッシュされ、最初に測る幅だけが不当に遅く出て
+  「比」が水増しされる)。生成時間からはリフレクション呼び出しのぶんを差し引く。
+  結果はソート可能な表と CSV (`Logs/MD3SDK_ComponentBenchmark.csv`) で出力する。
+  進行状況は `Logs/MD3SDK_ComponentBenchmark.log` に 1 行ずつ flush して書くので、
+  計測中にハングして強制終了しても、どのコンポーネントで止まったかが残る。
+  既定 (確保量 off) で全 67 型が約 5 秒。確保量の計測は完全な GC を強制するため
+  ヒープの大きいプロジェクトでは数分かかる。
+
 ## [0.8.5] - 2026-05-24
 
 ### Fixed
