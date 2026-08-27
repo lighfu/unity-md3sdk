@@ -12,7 +12,7 @@ namespace AjisaiFlow.MD3SDK.Editor
     /// (issue #4) の犯人を、1 回の強制終了で特定するための検査ウィンドウ。
     ///
     /// 使い方:
-    ///   1. Window/紫陽花広場/MD3 SDK Diagnostics/Narrow Layout Probe を実行する
+    ///   1. Window/紫陽花広場/Unity Material Design 3 SDK/Diagnostics/Narrow Layout Probe を実行する
     ///   2. ハングしなければ、もう一度同じメニューを実行する (次のステップへ自動で進む)
     ///   3. ハングしたら Unity を強制終了する
     ///   4. 再起動して「ログを開く」を実行する。
@@ -233,10 +233,10 @@ namespace AjisaiFlow.MD3SDK.Editor
 
         // ── メニュー ──
 
-        [MenuItem("Window/紫陽花広場/MD3 SDK Diagnostics/Narrow Layout Probe (warm: 400px から絞る)")]
+        [MenuItem(MD3Menu.Diagnostics + "Narrow Layout Probe (warm: 400px から絞る)", false, MD3Menu.ProbeWarmPriority)]
         public static void RunNextStepWarm() { RunNextStep(false); }
 
-        [MenuItem("Window/紫陽花広場/MD3 SDK Diagnostics/Narrow Layout Probe (cold: 100px で開く)")]
+        [MenuItem(MD3Menu.Diagnostics + "Narrow Layout Probe (cold: 100px で開く)", false, MD3Menu.ProbeColdPriority)]
         public static void RunNextStepCold() { RunNextStep(true); }
 
         static void RunNextStep(bool cold)
@@ -284,7 +284,7 @@ namespace AjisaiFlow.MD3SDK.Editor
             w.position = new Rect(200f, 200f, ramp[0], ProbeHeight);
         }
 
-        [MenuItem("Window/紫陽花広場/MD3 SDK Diagnostics/Narrow Layout Probe (ステップをリセット)", false, 100)]
+        [MenuItem(MD3Menu.Diagnostics + "Narrow Layout Probe (ステップをリセット)", false, MD3Menu.ProbeResetPriority)]
         public static void ResetSteps()
         {
             EditorPrefs.SetInt(StepKey(false), 0);
@@ -292,7 +292,7 @@ namespace AjisaiFlow.MD3SDK.Editor
             Log("---- ステップをリセットしました (warm / cold 両方) ----");
         }
 
-        [MenuItem("Window/紫陽花広場/MD3 SDK Diagnostics/Narrow Layout Probe (ログを開く)")]
+        [MenuItem(MD3Menu.Diagnostics + "Narrow Layout Probe (ログを開く)", false, MD3Menu.ProbeLogPriority)]
         public static void OpenLog()
         {
             if (!File.Exists(LogPath))

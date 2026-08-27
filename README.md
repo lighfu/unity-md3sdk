@@ -203,7 +203,7 @@ theme.ApplyTo(rootVisualElement);
 - **Noto Sans CJK** (日本語/韓国語/中国語)
 - **Noto Emoji** (絵文字 - モノクロ)
 
-フォントは `Fonts/` ディレクトリにキャッシュされます。設定は `Window > 紫陽花広場 > MD3 SDK Settings` から変更できます。
+フォントは `Fonts/` ディレクトリにキャッシュされます。設定は `Window > 紫陽花広場 > Unity Material Design 3 SDK > Settings` から変更できます。
 
 ## 動作環境
 
@@ -282,7 +282,7 @@ Fonts are automatically downloaded on first use:
 - **Noto Sans CJK** (Japanese / Korean / Chinese)
 - **Noto Emoji** (monochrome)
 
-Fonts are cached in the `Fonts/` directory. Configure via `Window > 紫陽花広場 > MD3 SDK Settings`.
+Fonts are cached in the `Fonts/` directory. Configure via `Window > 紫陽花広場 > Unity Material Design 3 SDK > Settings`.
 
 ## Requirements
 

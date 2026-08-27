@@ -66,7 +66,7 @@ namespace AjisaiFlow.MD3SDK.Editor
             catch { /* ログが書けなくても計測は続ける */ }
         }
 
-        [MenuItem("Window/紫陽花広場/MD3 SDK Diagnostics/Component Benchmark")]
+        [MenuItem(MD3Menu.Diagnostics + "Component Benchmark", false, MD3Menu.BenchmarkPriority)]
         public static void Open()
         {
             var w = GetWindow<MD3ComponentBenchmark>("MD3 Benchmark");

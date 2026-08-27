@@ -31,7 +31,7 @@ namespace AjisaiFlow.MD3SDK.Editor
             MD3Icon.Widgets, MD3Icon.Star, MD3Icon.TableChart, MD3Icon.NearMe, MD3Icon.Feedback, MD3Icon.Animation, MD3Icon.ProgressActivity
         };
 
-        [MenuItem("Window/紫陽花広場/MD3 SDK Sample")]
+        [MenuItem(MD3Menu.Root + "Sample", false, MD3Menu.SamplePriority)]
         public static void ShowWindow()
         {
             var w = GetWindow<MD3SDKSampleWindow>("MD3 SDK");

@@ -18,7 +18,7 @@ namespace AjisaiFlow.MD3SDK.Editor
         VisualElement _themePreviewContainer;
         MD3Text _statusLabel;
 
-        [MenuItem("Window/紫陽花広場/MD3 SDK Settings")]
+        [MenuItem(MD3Menu.Root + "Settings", false, MD3Menu.SettingsPriority)]
         static void Open()
         {
             var w = GetWindow<MD3SDKSettingsWindow>();
