@@ -16,14 +16,69 @@ namespace AjisaiFlow.MD3SDK.Editor
         static Font s_font;
         static FontAsset s_fontAsset;
 
-        /// <summary>フォントキャッシュをクリア。ダウンロード後に呼ぶと次回描画で再読み込みされる。</summary>
+        /// <summary>
+        /// フォントキャッシュをクリアし、生成済み FontAsset アセットも削除する。
+        /// アトラスが壊れた場合の手動復旧用。通常の再描画には <see cref="ResetCache"/>
+        /// (= MD3FontManager.RefreshAllWindows) で足りる。
+        /// </summary>
         public static void ClearCache()
+        {
+            ResetCache();
+            MD3FontAssetStore.InvalidateAll();
+        }
+
+        /// <summary>
+        /// static キャッシュだけを捨てる。生成済みアセットは消さない。
+        /// 元フォントや codepoint セットが変わった場合は MD3FontAssetStore 側の
+        /// 入力ハッシュ判定で自動的に焼き直されるため、再描画のたびに
+        /// 12MB の atlas を削除・再生成する必要はない。
+        /// </summary>
+        internal static void ResetCache()
         {
             s_font = null;
             s_fontAsset = null;
             s_filledFont = null;
             s_filledFontAsset = null;
-            MD3FontAssetStore.InvalidateAll();
+            s_warnedMissing = null;
+        }
+
+        static HashSet<uint> s_warnedMissing;
+
+        /// <summary>
+        /// atlas に入っていない codepoint が実際に使われたら、その codepoint につき
+        /// セッション 1 回だけ警告する。
+        ///
+        /// 焼き時の警告だけでは「MD3Icon に定数はあるのに atlas には入っていない」状態に
+        /// 気づけない。実際にこれで BMP 外 (U+FFF7E 以降) のアイコン 51 個が
+        /// 長期間 □ のまま見過ごされていた。使われた瞬間に名指しするのがこの関数。
+        /// </summary>
+        static void WarnIfMissingIcon(VisualElement element, FontAsset atlas)
+        {
+            if (atlas == null) return;
+            var te = element as TextElement;
+            if (te == null) return;
+
+            var text = te.text;
+            if (string.IsNullOrEmpty(text)) return;
+
+            // アイコン 1 文字のときだけ見る。
+            // 通常の文章にアイコンフォントを当てた場合まで警告すると煩いだけ。
+            int len = char.IsHighSurrogate(text[0]) && text.Length > 1 && char.IsLowSurrogate(text[1]) ? 2 : 1;
+            if (text.Length != len) return;
+
+            uint cp;
+            try { cp = (uint)char.ConvertToUtf32(text, 0); }
+            catch { return; }
+
+            if (atlas.HasCharacter(cp, true, false)) return;
+
+            if (s_warnedMissing == null) s_warnedMissing = new HashSet<uint>();
+            if (!s_warnedMissing.Add(cp)) return;
+
+            Debug.LogWarning(
+                $"[MD3Icon] codepoint U+{cp:X} はアイコン atlas に入っていないため □ で描画されます。" +
+                "MD3Icon に定数があっても atlas に焼かれていないことがあります。" +
+                "MD3FontManager.RebuildFontAssets() で焼き直してください。");
         }
 
         /// <summary>このクラスの全 const string (Material Symbols PUA codepoint 群) を列挙する。</summary>
@@ -4280,6 +4335,7 @@ namespace AjisaiFlow.MD3SDK.Editor
                 element.style.unityFont = s_font;
             element.style.fontSize = size;
             element.style.unityTextAlign = TextAnchor.MiddleCenter;
+            WarnIfMissingIcon(element, s_fontAsset);
         }
 
         /// <summary>
@@ -4314,7 +4370,29 @@ namespace AjisaiFlow.MD3SDK.Editor
             return iconName;
         }
 
+        // フォント未検出 / 生成失敗時の遅延リトライ。
+        // 旧実装は delayCall の中で s_retryScheduled を「処理の前に」false へ戻していたため、
+        // RefreshAllWindows -> Apply -> EnsureFont が「未スケジュール」と誤認して
+        // 毎 tick 際限なく再武装していた。1 回のリトライは InvalidateAll + 4211 codepoint の
+        // SDF 焼き直しを伴うため、これが CPU 張り付き・メモリ増加の増幅器になっていた。
+        // フラグは必ず処理後に戻し、さらに試行回数で頭を打つ。
+        const int MaxFontRetries = 3;
         static bool s_retryScheduled;
+        static int s_retryCount;
+
+        static void ScheduleFontRetry()
+        {
+            if (s_retryScheduled) return;
+            if (s_retryCount >= MaxFontRetries) return;
+
+            s_retryScheduled = true;
+            s_retryCount++;
+            EditorApplication.delayCall += () =>
+            {
+                try { MD3FontManager.RefreshAllWindows(); }
+                finally { s_retryScheduled = false; }
+            };
+        }
 
         static void EnsureFont()
         {
@@ -4342,19 +4420,12 @@ namespace AjisaiFlow.MD3SDK.Editor
             if (s_fontAsset != null)
             {
                 s_retryScheduled = false;
+                s_retryCount = 0;
                 return;
             }
 
-            // フォント未検出 / 生成失敗 — AssetDatabase 準備中の可能性。1 回だけ遅延リトライ。
-            if (!s_retryScheduled)
-            {
-                s_retryScheduled = true;
-                EditorApplication.delayCall += () =>
-                {
-                    s_retryScheduled = false;
-                    MD3FontManager.RefreshAllWindows();
-                };
-            }
+            // フォント未検出 / 生成失敗 — AssetDatabase 準備中の可能性。上限つきで遅延リトライ。
+            ScheduleFontRetry();
         }
 
         // ── Filled (FILL=1) variant ──
@@ -4387,6 +4458,7 @@ namespace AjisaiFlow.MD3SDK.Editor
                 element.style.unityFont = s_filledFont;
             element.style.fontSize = size;
             element.style.unityTextAlign = TextAnchor.MiddleCenter;
+            WarnIfMissingIcon(element, s_filledFontAsset);
         }
 
         static void EnsureFilledFont()
