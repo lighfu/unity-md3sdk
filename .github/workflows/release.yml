@@ -30,7 +30,7 @@ jobs:
       - name: Create release zip
         run: |
           zip -r "net.ajisaiflow.md3sdk-${{ steps.version.outputs.version }}.zip" . \
-            -x ".git/*" ".github/*" "README.md" "CHANGELOG.md" ".gitignore"
+            -x ".git/*" ".github/*" "README.md" "CHANGELOG.md" ".gitignore" "Tests/*" "Tests.meta"
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
