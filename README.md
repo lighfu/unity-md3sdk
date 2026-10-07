@@ -205,6 +205,21 @@ theme.ApplyTo(rootVisualElement);
 
 フォントは `Fonts/` ディレクトリにキャッシュされます。設定は `Window > 紫陽花広場 > Unity Material Design 3 SDK > Settings` から変更できます。
 
+## 開発・テスト
+
+Unity プロジェクトの `Packages/manifest.json` の `testables` に
+`net.ajisaiflow.md3sdk` を追加し、Unity Test Framework をインストールしてください。
+`Window > General > Test Runner` の EditMode で回帰テストを実行できます。
+テストは選択イベント、ポップアップ、レイアウト、テーマ、アニメーションを検証します。
+
+コマンドラインで実行する場合:
+
+```text
+Unity.exe -batchmode -projectPath <project> -runTests -testPlatform EditMode -testResults <results.xml> -logFile <test.log>
+```
+
+UI Toolkit のテストは一時 EditorWindow を使用するため、`-nographics` は指定しないでください。
+
 ## 動作環境
 
 - Unity 2022.3 以上
@@ -283,6 +298,14 @@ Fonts are automatically downloaded on first use:
 - **Noto Emoji** (monochrome)
 
 Fonts are cached in the `Fonts/` directory. Configure via `Window > 紫陽花広場 > Unity Material Design 3 SDK > Settings`.
+
+## Development and tests
+
+Install Unity Test Framework and add `net.ajisaiflow.md3sdk` to `testables` in
+the consuming project's `Packages/manifest.json`. Run the EditMode suite from
+`Window > General > Test Runner`. The tests cover selection events, popups,
+layout, themes, and animations. For command-line runs, use the command above
+without `-nographics`; the UI Toolkit tests open temporary EditorWindows.
 
 ## Requirements
 

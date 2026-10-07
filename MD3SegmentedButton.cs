@@ -85,10 +85,7 @@ namespace AjisaiFlow.MD3SDK.Editor
                 seg.RegisterCallback<MouseUpEvent>(e => { _pressedIndex = -1; ApplyColors(); });
                 seg.RegisterCallback<ClickEvent>(e =>
                 {
-                    if (_selectedIndex == idx) return;
-                    _selectedIndex = idx;
-                    ApplyColors();
-                    changed?.Invoke(_selectedIndex);
+                    SelectedIndex = idx;
                 });
 
                 _segments.Add(seg);

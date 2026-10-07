@@ -30,10 +30,7 @@ namespace AjisaiFlow.MD3SDK.Editor
         {
             _theme = MD3Theme.Default ?? MD3Theme.Auto();
 
-            var themeSheet = MD3Theme.LoadThemeStyleSheet();
-            var compSheet = MD3Theme.LoadComponentsStyleSheet();
-            if (themeSheet != null) rootVisualElement.styleSheets.Add(themeSheet);
-            if (compSheet != null) rootVisualElement.styleSheets.Add(compSheet);
+            MD3Theme.AddStyleSheetsTo(rootVisualElement);
 
             _theme.ApplyTo(rootVisualElement);
 

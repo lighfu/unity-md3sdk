@@ -85,12 +85,7 @@ namespace AjisaiFlow.MD3SDK.Editor
 
         void OnClick(ClickEvent evt)
         {
-            if (!_selected)
-            {
-                _selected = true;
-                ApplyColors();
-                changed?.Invoke(true);
-            }
+            Selected = true;
         }
 
         void ApplyColors()
@@ -147,11 +142,13 @@ namespace AjisaiFlow.MD3SDK.Editor
             {
                 if (_selectedIndex == value) return;
                 _selectedIndex = value;
-                UpdateSelection();
+                int version = ++_selectionVersion;
+                if (!UpdateSelection(version)) return;
                 changed?.Invoke(_selectedIndex);
             }
         }
         int _selectedIndex;
+        int _selectionVersion;
 
         public MD3NavDrawer() : this(new[] { (MD3Icon.Home, "Home", 0), (MD3Icon.Settings, "Settings", 0) }) { }
 
@@ -184,10 +181,7 @@ namespace AjisaiFlow.MD3SDK.Editor
                 var idx = i;
                 item.changed += selected =>
                 {
-                    if (!selected) return;
-                    _selectedIndex = idx;
-                    UpdateSelection();
-                    changed?.Invoke(_selectedIndex);
+                    if (selected) SelectedIndex = idx;
                 };
                 _items.Add(item);
                 Add(item);
@@ -214,16 +208,13 @@ namespace AjisaiFlow.MD3SDK.Editor
             schedule.Execute(() => PositionHighlight(false));
         }
 
-        void UpdateSelection()
+        bool UpdateSelection(int version)
         {
-            for (int i = 0; i < _items.Count; i++)
-            {
-                if (i == _selectedIndex && !_items[i].Selected)
-                    _items[i].Selected = true;
-                else if (i != _selectedIndex && _items[i].Selected)
-                    _items[i].Selected = false;
-            }
+            if (!MD3Selection.Update(_items, _selectedIndex,
+                item => item.Selected, (item, selected) => item.Selected = selected,
+                () => version == _selectionVersion)) return false;
             PositionHighlight(true);
+            return true;
         }
 
         void PositionHighlight(bool animate)

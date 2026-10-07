@@ -86,18 +86,12 @@ namespace AjisaiFlow.MD3SDK.Editor
 
         void OnClick(ClickEvent evt)
         {
-            if (_selected) return;
-            _selected = true;
-            UpdateVisual();
-            changed?.Invoke(_selected);
+            Selected = true;
         }
 
         void UpdateVisual()
         {
-            if (_selected)
-                AddToClassList("md3-radio--selected");
-            else
-                RemoveFromClassList("md3-radio--selected");
+            EnableInClassList("md3-radio--selected", _selected);
             ApplyColors();
         }
 

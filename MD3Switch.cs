@@ -103,17 +103,12 @@ namespace AjisaiFlow.MD3SDK.Editor
 
         void OnClick(ClickEvent evt)
         {
-            _value = !_value;
-            UpdateVisual(true);
-            changed?.Invoke(_value);
+            Value = !_value;
         }
 
         void UpdateVisual(bool animate)
         {
-            if (_value)
-                AddToClassList("md3-switch--on");
-            else
-                RemoveFromClassList("md3-switch--on");
+            EnableInClassList("md3-switch--on", _value);
 
             _thumbAnim?.Cancel();
             _sizeAnim?.Cancel();

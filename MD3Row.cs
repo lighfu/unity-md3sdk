@@ -22,24 +22,7 @@ namespace AjisaiFlow.MD3SDK.Editor
             if (wrap)
                 style.flexWrap = Wrap.Wrap;
 
-            if (gap > 0)
-            {
-                // USS doesn't support 'gap' in Unity 2022 — use margin on children via RegisterCallback
-                RegisterCallback<GeometryChangedEvent>(_ => ApplyGap(gap));
-                RegisterCallback<AttachToPanelEvent>(_ => ApplyGap(gap));
-            }
-        }
-
-        void ApplyGap(float gap)
-        {
-            float half = gap * 0.5f;
-            for (int i = 0; i < childCount; i++)
-            {
-                var child = ElementAt(i);
-                if (child.style.display == DisplayStyle.None) continue;
-                child.style.marginLeft = i == 0 ? 0 : half;
-                child.style.marginRight = i == childCount - 1 ? 0 : half;
-            }
+            MD3FlexGap.Register(this, gap, horizontal: true);
         }
     }
 }

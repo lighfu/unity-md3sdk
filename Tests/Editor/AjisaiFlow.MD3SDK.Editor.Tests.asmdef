@@ -1,0 +1,14 @@
+{
+    "name": "AjisaiFlow.MD3SDK.Editor.Tests",
+    "rootNamespace": "AjisaiFlow.MD3SDK.Editor.Tests",
+    "references": [
+        "AjisaiFlow.MD3SDK.Editor"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "autoReferenced": false,
+    "optionalUnityReferences": [
+        "TestAssemblies"
+    ]
+}

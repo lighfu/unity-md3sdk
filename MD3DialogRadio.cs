@@ -65,11 +65,7 @@ namespace AjisaiFlow.MD3SDK.Editor
 
         void OnClick(ClickEvent evt)
         {
-            if (!_radio.Selected)
-            {
-                _radio.Selected = true;
-                changed?.Invoke(true);
-            }
+            _radio.Selected = true;
             // ripple は MouseDown で発火済み
         }
 
