@@ -1,6 +1,7 @@
 /* ═══════════════════════════════════════════════════════════
  *  MD3 Components — Layout & Shape Styles
  *  Colors are set dynamically via C# (hover/press/disabled)
+ *  Additional USS style sheets can override geometry and typography.
  * ═══════════════════════════════════════════════════════════ */
 
 /* ── Button ── */
@@ -664,6 +665,72 @@
 .md3-text__label {
     -unity-text-align: middle-left;
     white-space: normal;
+}
+
+.md3-text--display-large > .md3-text__label {
+    font-size: 40px;
+}
+
+.md3-text--display-medium > .md3-text__label {
+    font-size: 32px;
+}
+
+.md3-text--display-small > .md3-text__label {
+    font-size: 28px;
+}
+
+.md3-text--headline-large > .md3-text__label {
+    font-size: 24px;
+    -unity-font-style: bold;
+}
+
+.md3-text--headline-medium > .md3-text__label {
+    font-size: 20px;
+    -unity-font-style: bold;
+}
+
+.md3-text--headline-small > .md3-text__label {
+    font-size: 16px;
+    -unity-font-style: bold;
+}
+
+.md3-text--title-large > .md3-text__label {
+    font-size: 18px;
+    -unity-font-style: bold;
+}
+
+.md3-text--title-medium > .md3-text__label {
+    font-size: 14px;
+    -unity-font-style: bold;
+}
+
+.md3-text--title-small > .md3-text__label {
+    font-size: 12px;
+    -unity-font-style: bold;
+}
+
+.md3-text--body > .md3-text__label {
+    font-size: 14px;
+}
+
+.md3-text--body-small > .md3-text__label {
+    font-size: 12px;
+}
+
+.md3-text--label-large > .md3-text__label {
+    font-size: 13px;
+}
+
+.md3-text--label-medium > .md3-text__label {
+    font-size: 12px;
+}
+
+.md3-text--label-small > .md3-text__label {
+    font-size: 11px;
+}
+
+.md3-text--label-annotation > .md3-text__label {
+    font-size: 10px;
 }
 
 /* ── SectionLabel ── */

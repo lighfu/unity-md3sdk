@@ -1,0 +1,81 @@
+/* Example overrides used by the Sample window's Theme page. */
+
+.md3-sample-style-preview {
+    flex-grow: 0;
+    margin-top: 12px;
+    margin-bottom: 12px;
+    padding: 16px;
+    border-radius: 12px;
+}
+
+.md3-sample-style-preview > * {
+    margin-bottom: 8px;
+}
+
+.md3-sample-style-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+.md3-sample-style-actions > .md3-button {
+    margin-right: 8px;
+    margin-bottom: 8px;
+}
+
+.md3-sample-customized {
+    --sample-spacing-s: 12px;
+    --sample-button-padding: 20px;
+    --sample-card-padding: 28px;
+    --sample-button-radius: 10px;
+    --sample-card-radius: 16px;
+    --sample-body-font-size: 16px;
+    --sample-title-font-size: 20px;
+    --sample-label-font-size: 15px;
+}
+
+.md3-sample-customized .md3-button {
+    border-radius: var(--sample-button-radius);
+    padding-left: var(--sample-button-padding);
+    padding-right: var(--sample-button-padding);
+}
+
+.md3-sample-customized .md3-card {
+    border-radius: var(--sample-card-radius);
+    padding: var(--sample-card-padding);
+}
+
+.md3-sample-customized .md3-card__title {
+    margin-bottom: var(--sample-spacing-s);
+}
+
+.md3-sample-customized .md3-sample-style-actions > .md3-button {
+    margin-right: var(--sample-spacing-s);
+    margin-bottom: var(--sample-spacing-s);
+}
+
+.md3-sample-customized .md3-card__body,
+.md3-sample-customized .md3-text--body > .md3-text__label {
+    font-size: var(--sample-body-font-size);
+}
+
+.md3-sample-customized .md3-card__title,
+.md3-sample-customized .md3-text--title-medium > .md3-text__label {
+    font-size: var(--sample-title-font-size);
+}
+
+.md3-sample-customized .md3-button__label {
+    font-size: var(--sample-label-font-size);
+}
+
+/* A class on one component adjusts its layout and its label only. */
+.md3-sample-customized .md3-sample-primary-action {
+    height: 48px;
+    border-radius: 4px;
+    padding-left: 32px;
+    padding-right: 32px;
+}
+
+.md3-sample-customized .md3-sample-primary-action .md3-button__label {
+    font-size: 17px;
+    -unity-font-style: normal;
+}

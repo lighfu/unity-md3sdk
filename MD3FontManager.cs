@@ -603,18 +603,13 @@ namespace AjisaiFlow.MD3SDK.Editor
 
             // 全 EditorWindow の rootVisualElement に新しい FontAsset を再適用する。
             // (フォント設定変更後、新フォントを全 MD3 ウィンドウへ伝播させるため)
-            var newFontAsset = MD3Theme.LoadFontAssetPublic();
             foreach (var w in Resources.FindObjectsOfTypeAll<EditorWindow>())
             {
                 var root = w.rootVisualElement;
                 if (root == null) continue;
 
-                // md3-dark/md3-light クラスを持つ要素にのみ FontAsset を再適用
-                if (root.ClassListContains("md3-dark") || root.ClassListContains("md3-light"))
-                {
-                    if (newFontAsset != null)
-                        root.style.unityFontDefinition = new StyleFontDefinition(newFontAsset);
-                }
+                // Nested theme scopes and explicitly selected fonts are preserved.
+                MD3Theme.RefreshFonts(root);
 
                 w.Repaint();
             }

@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- `MD3Theme.Clone()` で共有テーマを変更せずに独立したパレットを作成できるようにした。
+- 子ツリーとコンポーネント単位のテーマ適用、および `MD3Theme.ClearFrom()` による親テーマへの復帰に対応した。
+- `MD3Theme.ApplyTo(root, customStyleSheets)` で SDK の標準 USS と追加 USS をまとめて適用できるようにした。
+- `TextFont` / `TextFontAsset` によるテーマごとのカスタムフォント指定に対応した。
+- カスタム USS で文字サイズ・角丸・余白と個別コンポーネントの見た目を変更するドキュメント、および Sample のカスタマイズとリセット例を追加した。
+
+### Changed
+
+- `MD3Text` の文字サイズと太さを USS に移し、個別のクラスで上書きできるようにした。
+- テーマの再適用とフォント更新時に、子要素のテーマと明示したカスタムフォントを維持するようにした。
+
 ## [0.8.6] - 2026-08-27
 
 `MD3Icon` を使うウィンドウを開くたびにエディターが数分間フリーズする問題 (#3) の修正。

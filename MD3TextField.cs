@@ -138,7 +138,12 @@ namespace AjisaiFlow.MD3SDK.Editor
                 if (value.HasValue)
                     _container.Radius(value.Value);
                 else
-                    _container.Radius(_style == MD3TextFieldStyle.Filled ? 4f : 4f);
+                {
+                    _container.style.borderTopLeftRadius = StyleKeyword.Null;
+                    _container.style.borderTopRightRadius = StyleKeyword.Null;
+                    _container.style.borderBottomLeftRadius = StyleKeyword.Null;
+                    _container.style.borderBottomRightRadius = StyleKeyword.Null;
+                }
             }
         }
 

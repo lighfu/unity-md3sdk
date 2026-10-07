@@ -61,8 +61,6 @@ namespace AjisaiFlow.MD3SDK.Editor
             _label.pickingMode = PickingMode.Ignore;
             Add(_label);
 
-            ApplyTypography(textStyle);
-
             RegisterCallback<AttachToPanelEvent>(OnAttach);
         }
 
@@ -73,67 +71,6 @@ namespace AjisaiFlow.MD3SDK.Editor
         }
 
         void OnAttach(AttachToPanelEvent evt) => RefreshTheme();
-
-        void ApplyTypography(MD3TextStyle s)
-        {
-            switch (s)
-            {
-                case MD3TextStyle.DisplayLarge:
-                    _label.style.fontSize = 40;
-                    break;
-                case MD3TextStyle.DisplayMedium:
-                    _label.style.fontSize = 32;
-                    break;
-                case MD3TextStyle.DisplaySmall:
-                    _label.style.fontSize = 28;
-                    break;
-                case MD3TextStyle.HeadlineLarge:
-                    _label.style.fontSize = 24;
-                    _label.style.unityFontStyleAndWeight = FontStyle.Bold;
-                    break;
-                case MD3TextStyle.HeadlineMedium:
-                    _label.style.fontSize = 20;
-                    _label.style.unityFontStyleAndWeight = FontStyle.Bold;
-                    break;
-                case MD3TextStyle.HeadlineSmall:
-                    _label.style.fontSize = 16;
-                    _label.style.unityFontStyleAndWeight = FontStyle.Bold;
-                    break;
-                case MD3TextStyle.TitleLarge:
-                    _label.style.fontSize = 18;
-                    _label.style.unityFontStyleAndWeight = FontStyle.Bold;
-                    break;
-                case MD3TextStyle.TitleMedium:
-                    _label.style.fontSize = 14;
-                    _label.style.unityFontStyleAndWeight = FontStyle.Bold;
-                    break;
-                case MD3TextStyle.TitleSmall:
-                    _label.style.fontSize = 12;
-                    _label.style.unityFontStyleAndWeight = FontStyle.Bold;
-                    break;
-                case MD3TextStyle.Body:
-                    _label.style.fontSize = 14;
-                    break;
-                case MD3TextStyle.BodySmall:
-                    _label.style.fontSize = 12;
-                    break;
-                case MD3TextStyle.LabelLarge:
-                    _label.style.fontSize = 13;
-                    break;
-                case MD3TextStyle.LabelMedium:
-                    _label.style.fontSize = 12;
-                    break;
-                case MD3TextStyle.LabelSmall:
-#pragma warning disable CS0618
-                case MD3TextStyle.LabelCaption:
-#pragma warning restore CS0618
-                    _label.style.fontSize = 11;
-                    break;
-                case MD3TextStyle.LabelAnnotation:
-                    _label.style.fontSize = 10;
-                    break;
-            }
-        }
 
         void ApplyColors()
         {
