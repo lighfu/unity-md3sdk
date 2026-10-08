@@ -117,6 +117,7 @@ namespace AjisaiFlow.MD3SDK.Editor
             // Add menu to themed root
             _menu.style.opacity = 0f;
             _menu.style.scale = new Scale(new Vector3(0.95f, 0.95f, 1f));
+            MD3Overlay.InheritScope(_menu, this);
             themedRoot.Add(_menu);
             (_shadowAmbient, _shadowKey) = MD3Elevation.AddSiblingShadow(themedRoot, _menu, 4f, 2);
 

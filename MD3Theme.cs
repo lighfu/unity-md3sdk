@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+using System;
 using System.Runtime.CompilerServices;
 using UnityEditor;
 using UnityEngine;
@@ -31,29 +31,40 @@ namespace AjisaiFlow.MD3SDK.Editor
 
         public bool IsDark { get; set; }
 
+        /// <summary>Optional text font. Null uses the SDK-managed font.</summary>
+        public Font TextFont { get; set; }
+
+        /// <summary>Optional text FontAsset. Takes precedence over TextFont.</summary>
+        public FontAsset TextFontAsset { get; set; }
+
+        /// <summary>
+        /// Creates an independent palette and font configuration. Font assets are shared.
+        /// Clone Dark()/Light()/Auto() before editing their shared defaults.
+        /// </summary>
+        public MD3Theme Clone() => (MD3Theme)MemberwiseClone();
+
         static MD3Theme s_dark;
         static MD3Theme s_light;
         static MD3Theme s_default;
-        static readonly Dictionary<VisualElement, MD3Theme> s_customThemes = new();
-
-        // カスタムテーマの re-attach 復元用。ConditionalWeakTable はキーが GC されるとエントリも自動削除される。
+        // Weak keys retain scopes across detach/re-attach without retaining abandoned trees.
         static readonly ConditionalWeakTable<VisualElement, MD3Theme> s_appliedThemes = new();
-        static readonly ConditionalWeakTable<VisualElement, object> s_callbacksRegistered = new();
-        static readonly object s_sentinel = new();
+        // スコープの外に置くポップアップが起点のテーマを引き継ぐための表。フォント更新の対象にはしない。
+        static readonly ConditionalWeakTable<VisualElement, MD3Theme> s_linkedThemes = new();
 
         static Font s_font;
         static FontAsset s_fontAsset;
 
         /// <summary>
-        /// VisualElement ツリーを遡ってテーマを解決する。
+        /// 要素自身から VisualElement ツリーを遡ってテーマを解決する。
         /// カスタムテーマが登録されていればそれを優先、なければ CSS クラスからデフォルト。
         /// </summary>
         public static MD3Theme Resolve(VisualElement el)
         {
-            var current = el?.parent;
+            var current = el;
             while (current != null)
             {
-                if (s_customThemes.TryGetValue(current, out var custom))
+                if (s_appliedThemes.TryGetValue(current, out var custom) ||
+                    s_linkedThemes.TryGetValue(current, out custom))
                     return custom;
                 if (current.ClassListContains("md3-dark") || current.ClassListContains("md3-light"))
                     return current.ClassListContains("md3-dark") ? Dark() : Light();
@@ -202,60 +213,160 @@ namespace AjisaiFlow.MD3SDK.Editor
         }
 
         /// <summary>
-        /// Applies the theme to a root VisualElement by adding md3-dark/md3-light class
-        /// and setting inline Surface background + OnSurface text color.
-        /// Components resolve their colors by walking up the tree to find the theme class.
+        /// Applies a theme scope to a container or an individual component.
+        /// Nested scopes retain their own themes. Reapply after editing color/font fields.
         /// </summary>
         public void ApplyTo(VisualElement root)
         {
+            if (root == null) throw new ArgumentNullException(nameof(root));
             root.RemoveFromClassList("md3-dark");
             root.RemoveFromClassList("md3-light");
             root.AddToClassList(IsDark ? "md3-dark" : "md3-light");
-
-            // カスタムテーマを登録（Dark()/Light() シングルトンでなければ）
-            if (this != s_dark && this != s_light)
-            {
-                s_customThemes[root] = this;
-
-                // re-attach 時に復元するためのバックアップ (WeakRef でリーク防止)
-                s_appliedThemes.Remove(root);
-                s_appliedThemes.Add(root, this);
-
-                // コールバックは root 1 つにつき 1 回だけ登録
-                if (!s_callbacksRegistered.TryGetValue(root, out _))
-                {
-                    s_callbacksRegistered.Add(root, s_sentinel);
-                    root.RegisterCallback<DetachFromPanelEvent>(_ => s_customThemes.Remove(root));
-                    root.RegisterCallback<AttachToPanelEvent>(_ =>
-                    {
-                        if (s_appliedThemes.TryGetValue(root, out var theme))
-                            s_customThemes[root] = theme;
-                    });
-                }
-            }
-            else
-            {
-                s_customThemes.Remove(root);
-                s_appliedThemes.Remove(root);
-            }
+            root.EnableInClassList("md3-theme-component", root is IMD3Themeable);
+            s_appliedThemes.Remove(root);
+            s_appliedThemes.Add(root, this);
+            // 入れ子かどうかはパネルに追加されるまで決まらないので、追加時にフォントを決め直す。
+            // 同じデリゲートは要素ごとに 1 回しか登録されない。
+            root.RegisterCallback(s_onScopeAttached);
 
             // Set root surface colors inline (USS custom properties can't be set from C#)
-            root.style.backgroundColor = Surface;
+            // Components own their backgrounds (for example, text remains transparent).
+            if (!(root is IMD3Themeable))
+                root.style.backgroundColor = Surface;
             root.style.color = OnSurface;
-
-            // CJK + Emoji フォント適用（フォールバック不整合防止）
-            var fontAsset = LoadFontAsset();
-            if (fontAsset != null)
-                root.style.unityFontDefinition = new StyleFontDefinition(fontAsset);
-            else
-            {
-                var font = LoadFont();
-                if (font != null)
-                    root.style.unityFontDefinition = FontDefinition.FromFont(font);
-            }
+            ApplyTextFont(root);
+            RefreshChildFonts(root);
 
             // Refresh all MD3 components in the tree
             RefreshDescendants(root);
+        }
+
+        /// <summary>
+        /// Installs the SDK styles once, adds custom sheets last, and applies this theme.
+        /// USS controls typography, shape and spacing; theme fields control stateful colors.
+        /// </summary>
+        public void ApplyTo(VisualElement root, params StyleSheet[] customStyleSheets)
+        {
+            if (root == null) throw new ArgumentNullException(nameof(root));
+            AddStyleSheet(root, LoadThemeStyleSheet());
+            AddStyleSheet(root, LoadComponentsStyleSheet());
+            if (customStyleSheets != null)
+            {
+                foreach (var sheet in customStyleSheets)
+                {
+                    if (sheet == null) continue;
+                    // Moving an existing custom sheet to the end preserves its precedence.
+                    if (root.styleSheets.Contains(sheet)) root.styleSheets.Remove(sheet);
+                    root.styleSheets.Add(sheet);
+                }
+            }
+            ApplyTo(root);
+        }
+
+        static void AddStyleSheet(VisualElement root, StyleSheet sheet)
+        {
+            if (sheet != null && !root.styleSheets.Contains(sheet))
+                root.styleSheets.Add(sheet);
+        }
+
+        /// <summary>
+        /// Removes the theme scope and its inline surface/text/font styles, then refreshes
+        /// components using their inherited theme. Attached style sheets remain available.
+        /// </summary>
+        public static void ClearFrom(VisualElement root)
+        {
+            if (root == null) throw new ArgumentNullException(nameof(root));
+            if (!s_appliedThemes.TryGetValue(root, out _) &&
+                !root.ClassListContains("md3-dark") && !root.ClassListContains("md3-light"))
+                return;
+
+            s_appliedThemes.Remove(root);
+            root.UnregisterCallback(s_onScopeAttached);
+            root.RemoveFromClassList("md3-dark");
+            root.RemoveFromClassList("md3-light");
+            root.RemoveFromClassList("md3-theme-component");
+            if (!(root is IMD3Themeable))
+                root.style.backgroundColor = StyleKeyword.Null;
+            root.style.color = StyleKeyword.Null;
+            root.style.unityFontDefinition = StyleKeyword.Null;
+            RefreshChildFonts(root);
+            RefreshDescendants(root);
+        }
+
+        static readonly EventCallback<AttachToPanelEvent> s_onScopeAttached = OnScopeAttached;
+
+        static void OnScopeAttached(AttachToPanelEvent evt)
+        {
+            var root = (VisualElement)evt.currentTarget;
+            if (s_appliedThemes.TryGetValue(root, out var theme))
+                theme.ApplyTextFont(root, keepCurrentOnFailure: true);
+        }
+
+        /// <param name="keepCurrentOnFailure">
+        /// true なら SDK フォントを用意できないときに今のフォントを残す。
+        /// フォント更新の直後は TTF のインポートが終わっておらず、ここで置き換えると
+        /// 開いているウィンドウがフォールバックの無いフォントや既定フォントに落ちる。
+        /// </param>
+        void ApplyTextFont(VisualElement root, bool keepCurrentOnFailure = false)
+        {
+            if (TextFontAsset != null)
+                root.style.unityFontDefinition = new StyleFontDefinition(TextFontAsset);
+            else if (TextFont != null)
+                root.style.unityFontDefinition = FontDefinition.FromFont(TextFont);
+            else if (HasAncestorScope(root))
+                // 入れ子のスコープはフォントを指定せず、外側のスコープのフォントを継承する
+                root.style.unityFontDefinition = StyleKeyword.Null;
+            else
+            {
+                var fontAsset = LoadFontAsset();
+                if (fontAsset != null)
+                    root.style.unityFontDefinition = new StyleFontDefinition(fontAsset);
+                else if (!keepCurrentOnFailure)
+                {
+                    var font = LoadFont();
+                    if (font != null)
+                        root.style.unityFontDefinition = FontDefinition.FromFont(font);
+                }
+            }
+        }
+
+        static bool HasAncestorScope(VisualElement el)
+        {
+            for (var current = el.parent; current != null; current = current.parent)
+            {
+                if (s_appliedThemes.TryGetValue(current, out _) || s_linkedThemes.TryGetValue(current, out _))
+                    return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// ポップアップなど、スコープの外に置く要素に起点のテーマを引き継がせる。
+        /// インラインの色は設定しない（要素側が自分で塗る）。
+        /// </summary>
+        internal static void LinkScope(VisualElement el, MD3Theme theme)
+        {
+            s_linkedThemes.Remove(el);
+            s_linkedThemes.Add(el, theme);
+        }
+
+        internal static void RefreshFonts(VisualElement root)
+        {
+            if (s_appliedThemes.TryGetValue(root, out var theme))
+                theme.ApplyTextFont(root, keepCurrentOnFailure: true);
+            else if ((root.ClassListContains("md3-dark") || root.ClassListContains("md3-light")) &&
+                     !HasAncestorScope(root))
+                // ApplyTo を使わずクラスだけ付けたウィンドウのルート
+                Resolve(root).ApplyTextFont(root, keepCurrentOnFailure: true);
+            RefreshChildFonts(root);
+        }
+
+        // 外側のスコープが増減すると、内側のスコープが継承するか自分で指定するかが変わる。
+        static void RefreshChildFonts(VisualElement root)
+        {
+            var children = root.hierarchy;
+            for (int i = 0; i < children.childCount; i++)
+                RefreshFonts(children[i]);
         }
 
         static void RefreshDescendants(VisualElement el)
@@ -278,12 +389,6 @@ namespace AjisaiFlow.MD3SDK.Editor
         {
             AddStyleSheet(root, LoadThemeStyleSheet());
             AddStyleSheet(root, LoadComponentsStyleSheet());
-        }
-
-        static void AddStyleSheet(VisualElement root, StyleSheet sheet)
-        {
-            if (sheet != null && !root.styleSheets.Contains(sheet))
-                root.styleSheets.Add(sheet);
         }
 
         public static StyleSheet LoadThemeStyleSheet()

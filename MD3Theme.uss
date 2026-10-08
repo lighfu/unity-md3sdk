@@ -7,6 +7,11 @@
     flex-grow: 1;
 }
 
+/* A theme applied to a component must not make it grow like a window root. */
+.md3-theme-component {
+    flex-grow: 0;
+}
+
 /* ── Material Design 3 Scrollbar ── */
 
 /* Vertical scroller */

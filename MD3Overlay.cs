@@ -8,16 +8,30 @@ namespace AjisaiFlow.MD3SDK.Editor
     internal static class MD3Overlay
     {
         // Popups belong to the outermost themed root so they are not clipped by
-        // an inner themed container. Callers choose their own unthemed fallback.
+        // an inner themed container. A theme applied to a single component is not
+        // a host. Callers choose their own unthemed fallback.
         internal static VisualElement FindThemedRoot(VisualElement from)
         {
             VisualElement themedRoot = null;
             for (var element = from; element != null; element = element.parent)
             {
-                if (element.ClassListContains("md3-dark") || element.ClassListContains("md3-light"))
+                if ((element.ClassListContains("md3-dark") || element.ClassListContains("md3-light")) &&
+                    !element.ClassListContains("md3-theme-component"))
                     themedRoot = element;
             }
             return themedRoot;
+        }
+
+        // The host may sit outside the anchor's theme scope, so the popup carries
+        // the anchor's palette and font itself. Call before adding the popup.
+        internal static void InheritScope(VisualElement popup, VisualElement anchor)
+        {
+            MD3Theme.LinkScope(popup, MD3Theme.Resolve(anchor));
+            var font = anchor.resolvedStyle.unityFontDefinition;
+            if (font.fontAsset != null || font.font != null)
+                popup.style.unityFontDefinition = font;
+            else
+                popup.style.unityFontDefinition = StyleKeyword.Null;
         }
 
         internal static VisualElement AddScrim(VisualElement parent, Color color, Action onClick)

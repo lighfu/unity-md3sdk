@@ -19,7 +19,7 @@ namespace AjisaiFlow.MD3SDK.Editor.Tests
         }
 
         [Test]
-        public void ResolveUsesTheNearestAncestorTheme()
+        public void ResolveUsesTheNearestThemeIncludingTheElementItself()
         {
             var outer = new VisualElement();
             outer.AddToClassList("md3-dark");
@@ -29,7 +29,8 @@ namespace AjisaiFlow.MD3SDK.Editor.Tests
             outer.Add(inner);
             inner.Add(child);
             Assert.That(MD3Theme.Resolve(child), Is.SameAs(MD3Theme.Light()));
-            Assert.That(MD3Theme.Resolve(inner), Is.SameAs(MD3Theme.Dark()));
+            Assert.That(MD3Theme.Resolve(inner), Is.SameAs(MD3Theme.Light()));
+            Assert.That(MD3Theme.Resolve(outer), Is.SameAs(MD3Theme.Dark()));
         }
 
         [Test]

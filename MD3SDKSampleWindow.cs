@@ -373,6 +373,65 @@ namespace AjisaiFlow.MD3SDK.Editor
             applyRow.Add(resetBtn);
             c.Add(applyRow);
             c.Add(seedPreviewGrid);
+
+            Build_StyleCustomization(c);
+        }
+
+        void Build_StyleCustomization(VisualElement c)
+        {
+            AddSection(c, "Style Customization");
+            c.Add(new MD3Text("Customize colors, typography, spacing and corners in a local scope.", MD3TextStyle.BodySmall));
+            c.Add(new MD3Text("Hover or press the accent button to see its individual palette. The page theme switch keeps local overrides.", MD3TextStyle.BodySmall));
+
+            var sheetPath = AssetDatabase.GUIDToAssetPath("b3e8ec0d5f334757b873f2e905860f41");
+            var customSheet = string.IsNullOrEmpty(sheetPath) ? null : AssetDatabase.LoadAssetAtPath<StyleSheet>(sheetPath);
+            var preview = new VisualElement();
+            preview.AddToClassList("md3-sample-style-preview");
+            if (customSheet != null)
+                preview.styleSheets.Add(customSheet);
+
+            preview.Add(new MD3Text("Your local theme", MD3TextStyle.TitleMedium));
+            preview.Add(new MD3Text("Custom USS sets body text size, card and button corners, and spacing.", MD3TextStyle.Body));
+            preview.Add(new MD3Card("Component styles", "This card uses the same local theme as its neighbors.", MD3CardStyle.Outlined));
+
+            var actions = new VisualElement();
+            actions.AddToClassList("md3-sample-style-actions");
+            actions.Add(new MD3Button("Shared palette", MD3ButtonStyle.Filled));
+            var accentButton = new MD3Button("Individual accent", MD3ButtonStyle.Filled);
+            accentButton.AddToClassList("md3-sample-primary-action");
+            actions.Add(accentButton);
+            preview.Add(actions);
+            c.Add(preview);
+
+            var controls = Row();
+            var customizeButton = new MD3Button("Apply Custom Style", MD3ButtonStyle.Tonal, size: MD3ButtonSize.Small);
+            var resetButton = new MD3Button("Reset Custom Style", MD3ButtonStyle.Outlined, size: MD3ButtonSize.Small);
+            resetButton.style.marginLeft = 8;
+            controls.Add(customizeButton);
+            controls.Add(resetButton);
+            c.Add(controls);
+
+            var status = new MD3Text("Inheriting the page theme and default styles.", MD3TextStyle.BodySmall);
+            c.Add(status);
+            customizeButton.clicked += () =>
+            {
+                var localTheme = MD3Theme.FromSeedColor(new Color(0.0f, 0.55f, 0.55f), _isDark);
+                preview.AddToClassList("md3-sample-customized");
+                localTheme.ApplyTo(preview, customSheet);
+
+                var accentTheme = localTheme.Clone();
+                accentTheme.Primary = new Color(0.60f, 0.22f, 0.10f);
+                accentTheme.OnPrimary = Color.white;
+                accentTheme.ApplyTo(accentButton);
+                status.Text = "Local teal theme + custom USS + individual accent palette.";
+            };
+            resetButton.clicked += () =>
+            {
+                MD3Theme.ClearFrom(accentButton);
+                MD3Theme.ClearFrom(preview);
+                preview.RemoveFromClassList("md3-sample-customized");
+                status.Text = "Inheriting the page theme and default styles.";
+            };
         }
 
         void Build_Typography(VisualElement c)

@@ -33,6 +33,39 @@ namespace AjisaiFlow.MD3SDK.Editor.Tests
         }
 
         [Test]
+        public void FindThemedRootSkipsThemesAppliedToSingleComponents()
+        {
+            var root = new VisualElement();
+            var button = new MD3Button("Button");
+            root.Add(button);
+            MD3Theme.Dark().Clone().ApplyTo(button);
+
+            Assert.That(MD3Overlay.FindThemedRoot(button), Is.Null);
+
+            MD3Theme.Light().ApplyTo(root);
+            Assert.That(MD3Overlay.FindThemedRoot(button), Is.SameAs(root));
+        }
+
+        [Test]
+        public void InheritScopeCarriesTheAnchorThemeOutsideItsScope()
+        {
+            var root = new VisualElement();
+            var section = new VisualElement();
+            var anchor = new VisualElement();
+            root.Add(section);
+            section.Add(anchor);
+            MD3Theme.Light().ApplyTo(root);
+            var sectionTheme = MD3Theme.Dark().Clone();
+            sectionTheme.ApplyTo(section);
+
+            var popup = new VisualElement();
+            MD3Overlay.InheritScope(popup, anchor);
+            root.Add(popup);
+
+            Assert.That(MD3Theme.Resolve(popup), Is.SameAs(sectionTheme));
+        }
+
+        [Test]
         public void FindThemedRootLeavesUnthemedFallbackToTheCaller()
         {
             var parent = new VisualElement();
