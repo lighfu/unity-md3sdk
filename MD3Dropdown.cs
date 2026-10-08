@@ -108,26 +108,11 @@ namespace AjisaiFlow.MD3SDK.Editor
             _arrow.style.rotate = new Rotate(180f);
 
             // Find themed root
-            var root = this as VisualElement;
-            VisualElement themedRoot = null;
-            while (root != null)
-            {
-                if (root.ClassListContains("md3-dark") || root.ClassListContains("md3-light"))
-                    themedRoot = root;
-                root = root.parent;
-            }
+            var themedRoot = MD3Overlay.FindThemedRoot(this);
             if (themedRoot == null) themedRoot = this.parent ?? this;
 
             // Add transparent scrim
-            _scrim = new VisualElement();
-            _scrim.AddToClassList("md3-fab-speed-dial__scrim"); // reuse scrim style
-            _scrim.style.backgroundColor = Color.clear;
-            _scrim.RegisterCallback<ClickEvent>(e =>
-            {
-                e.StopPropagation();
-                Close();
-            });
-            themedRoot.Add(_scrim);
+            _scrim = MD3Overlay.AddScrim(themedRoot, Color.clear, Close);
 
             // Add menu to themed root
             _menu.style.opacity = 0f;
@@ -136,18 +121,8 @@ namespace AjisaiFlow.MD3SDK.Editor
             (_shadowAmbient, _shadowKey) = MD3Elevation.AddSiblingShadow(themedRoot, _menu, 4f, 2);
 
             // Position menu relative to field
-            EventCallback<GeometryChangedEvent> positionCb = null;
-            var posRoot = themedRoot;
-            positionCb = e =>
-            {
-                _menu.UnregisterCallback(positionCb);
-                var fieldWorld = _field.worldBound;
-                var rootWorld = posRoot.worldBound;
-                _menu.style.left = fieldWorld.x - rootWorld.x;
-                _menu.style.top = fieldWorld.yMax - rootWorld.y + 2f;
-                _menu.style.width = fieldWorld.width;
-            };
-            _menu.RegisterCallback(positionCb);
+            MD3Overlay.OnNextGeometry(_menu,
+                () => MD3Overlay.PlaceBelow(_menu, _field, themedRoot, matchWidth: true));
 
             // Animate in
             _menuAnim?.Cancel();

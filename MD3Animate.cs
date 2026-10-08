@@ -335,16 +335,11 @@ namespace AjisaiFlow.MD3SDK.Editor
                 if (handle.Cancelled || settled) return;
 
                 double now = EditorApplication.timeSinceStartup;
-                float dt = Mathf.Min((float)(now - lastTime), 0.033f);
+                float dt = (float)(now - lastTime);
                 lastTime = now;
 
-                float displacement = pos - _springTarget;
-                float springForce = -_springStiffness * displacement;
-                float dampingForce = -_springDamping * vel;
-                float acceleration = (springForce + dampingForce) / _springMass;
-
-                vel += acceleration * dt;
-                pos += vel * dt;
+                MD3Animate.AdvanceSpring(ref pos, ref vel, dt,
+                    _springTarget, _springStiffness, _springDamping, _springMass);
 
                 _springUpdate(pos);
 
@@ -403,38 +398,7 @@ namespace AjisaiFlow.MD3SDK.Editor
             Action<float> onUpdate,
             Action onComplete = null)
         {
-            var handle = new MD3AnimationHandle();
-            double startTime = EditorApplication.timeSinceStartup;
-
-            MD3AnimLoop.Register(target);
-
-            target.schedule.Execute(() =>
-            {
-                if (handle.Cancelled)
-                {
-                    MD3AnimLoop.Unregister(target);
-                    return;
-                }
-
-                float elapsed = (float)((EditorApplication.timeSinceStartup - startTime) * 1000.0);
-                float t = Mathf.Clamp01(elapsed / durationMs);
-                float eased = ApplyEasing(t, easing);
-                float value = Mathf.LerpUnclamped(from, to, eased);
-                onUpdate(value);
-
-                if (t >= 1f)
-                {
-                    MD3AnimLoop.Unregister(target);
-                    onComplete?.Invoke();
-                }
-            }).Every(16).Until(() =>
-            {
-                bool done = handle.Cancelled || (float)((EditorApplication.timeSinceStartup - startTime) * 1000.0) >= durationMs;
-                if (done) MD3AnimLoop.Unregister(target);
-                return done;
-            });
-
-            return handle;
+            return Float(target, from, to, durationMs, t => ApplyEasing(t, easing), onUpdate, onComplete);
         }
 
         /// <summary>Float with custom easing function.</summary>
@@ -560,16 +524,10 @@ namespace AjisaiFlow.MD3SDK.Editor
                 if (handle.Cancelled || settled) return;
 
                 double now = EditorApplication.timeSinceStartup;
-                float dt = Mathf.Min((float)(now - lastTime), 0.033f);
+                float dt = (float)(now - lastTime);
                 lastTime = now;
 
-                float displacement = pos - to;
-                float springForce = -stiffness * displacement;
-                float dampingForce = -damping * vel;
-                float acceleration = (springForce + dampingForce) / mass;
-
-                vel += acceleration * dt;
-                pos += vel * dt;
+                AdvanceSpring(ref pos, ref vel, dt, to, stiffness, damping, mass);
 
                 onUpdate(pos);
 
@@ -584,6 +542,19 @@ namespace AjisaiFlow.MD3SDK.Editor
             }).Every(16).Until(() => handle.Cancelled || settled);
 
             return handle;
+        }
+
+        internal static void AdvanceSpring(ref float position, ref float velocity, float deltaTime,
+            float target, float stiffness, float damping, float mass)
+        {
+            float dt = Mathf.Min(deltaTime, 0.033f);
+            float displacement = position - target;
+            float springForce = -stiffness * displacement;
+            float dampingForce = -damping * velocity;
+            float acceleration = (springForce + dampingForce) / mass;
+
+            velocity += acceleration * dt;
+            position += velocity * dt;
         }
 
         // ── New: Sequence helper ──

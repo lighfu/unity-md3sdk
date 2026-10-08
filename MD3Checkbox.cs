@@ -111,17 +111,12 @@ namespace AjisaiFlow.MD3SDK.Editor
         void OnClick(ClickEvent evt)
         {
             if (_disabled) return;
-            _value = !_value;
-            UpdateVisual(animate: true);
-            changed?.Invoke(_value);
+            Value = !_value;
         }
 
         void UpdateVisual(bool animate)
         {
-            if (_value)
-                AddToClassList("md3-checkbox--checked");
-            else
-                RemoveFromClassList("md3-checkbox--checked");
+            EnableInClassList("md3-checkbox--checked", _value);
 
             _checkAnim?.Cancel();
             _boxAnim?.Cancel();

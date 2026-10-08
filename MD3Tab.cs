@@ -66,12 +66,7 @@ namespace AjisaiFlow.MD3SDK.Editor
 
         void OnClick(ClickEvent evt)
         {
-            if (!_selected)
-            {
-                _selected = true;
-                ApplyColors();
-                changed?.Invoke(true);
-            }
+            Selected = true;
             // ripple は MouseDown で発火済み
         }
 
@@ -127,11 +122,13 @@ namespace AjisaiFlow.MD3SDK.Editor
             {
                 if (_selectedIndex == value) return;
                 _selectedIndex = value;
-                UpdateSelection();
+                int version = ++_selectionVersion;
+                if (!UpdateSelection(version)) return;
                 changed?.Invoke(_selectedIndex);
             }
         }
         int _selectedIndex;
+        int _selectionVersion;
 
         public MD3TabBar() : this(new[] { "Tab 1", "Tab 2" }, 0) { }
 
@@ -149,10 +146,7 @@ namespace AjisaiFlow.MD3SDK.Editor
                 var idx = i;
                 tab.changed += selected =>
                 {
-                    if (!selected) return;
-                    _selectedIndex = idx;
-                    UpdateSelection();
-                    changed?.Invoke(_selectedIndex);
+                    if (selected) SelectedIndex = idx;
                 };
                 _tabs.Add(tab);
                 Add(tab);
@@ -182,16 +176,13 @@ namespace AjisaiFlow.MD3SDK.Editor
             PositionIndicator(false);
         }
 
-        void UpdateSelection()
+        bool UpdateSelection(int version)
         {
-            for (int i = 0; i < _tabs.Count; i++)
-            {
-                if (i == _selectedIndex && !_tabs[i].Selected)
-                    _tabs[i].Selected = true;
-                else if (i != _selectedIndex && _tabs[i].Selected)
-                    _tabs[i].Selected = false;
-            }
+            if (!MD3Selection.Update(_tabs, _selectedIndex,
+                tab => tab.Selected, (tab, selected) => tab.Selected = selected,
+                () => version == _selectionVersion)) return false;
             PositionIndicator(true);
+            return true;
         }
 
         void PositionIndicator(bool animate)

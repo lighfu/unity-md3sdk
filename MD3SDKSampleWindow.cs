@@ -19,17 +19,37 @@ namespace AjisaiFlow.MD3SDK.Editor
         int _layoutCallbackCount;
         readonly List<VisualElement> _sidebarItems = new List<VisualElement>();
 
-        static readonly string[] PageNames =
+        // Keep navigation metadata and builders together so new pages need one entry.
+        static readonly SamplePage[] Pages =
         {
-            "Theme", "Typography", "Layout", "Buttons", "Inputs", "Selection",
-            "Display", "Shapes", "Data", "Navigation", "Feedback", "Animation", "Progress"
+            new SamplePage("Theme", MD3Icon.Palette, (w, c) => w.Build_Theme(c)),
+            new SamplePage("Typography", MD3Icon.FormatSize, (w, c) => w.Build_Typography(c)),
+            new SamplePage("Layout", MD3Icon.GridView, (w, c) => w.Build_Layout(c)),
+            new SamplePage("Buttons", MD3Icon.SmartButton, (w, c) => w.Build_Buttons(c)),
+            new SamplePage("Inputs", MD3Icon.Tune, (w, c) => w.Build_Inputs(c)),
+            new SamplePage("Selection", MD3Icon.Checklist, (w, c) => w.Build_Selection(c)),
+            new SamplePage("Display", MD3Icon.Widgets, (w, c) => w.Build_Display(c)),
+            new SamplePage("Shapes", MD3Icon.Star, (w, c) => w.Build_Shapes(c)),
+            new SamplePage("Data", MD3Icon.TableChart, (w, c) => w.Build_Data(c)),
+            new SamplePage("Navigation", MD3Icon.NearMe, (w, c) => w.Build_Navigation(c)),
+            new SamplePage("Feedback", MD3Icon.Feedback, (w, c) => w.Build_Feedback(c)),
+            new SamplePage("Animation", MD3Icon.Animation, (w, c) => w.Build_Animation(c)),
+            new SamplePage("Progress", MD3Icon.ProgressActivity, (w, c) => w.Build_Progress(c)),
         };
-        static readonly string[] PageIcons =
+
+        readonly struct SamplePage
         {
-            MD3Icon.Palette, MD3Icon.FormatSize, MD3Icon.GridView, MD3Icon.SmartButton,
-            MD3Icon.Tune, MD3Icon.Checklist,
-            MD3Icon.Widgets, MD3Icon.Star, MD3Icon.TableChart, MD3Icon.NearMe, MD3Icon.Feedback, MD3Icon.Animation, MD3Icon.ProgressActivity
-        };
+            internal readonly string Name;
+            internal readonly string Icon;
+            internal readonly Action<MD3SDKSampleWindow, VisualElement> Build;
+
+            internal SamplePage(string name, string icon, Action<MD3SDKSampleWindow, VisualElement> build)
+            {
+                Name = name;
+                Icon = icon;
+                Build = build;
+            }
+        }
 
         [MenuItem(MD3Menu.Root + "Sample", false, MD3Menu.SamplePriority)]
         public static void ShowWindow()
@@ -49,12 +69,7 @@ namespace AjisaiFlow.MD3SDK.Editor
             _isDark = MD3Theme.Default != null ? MD3Theme.Default.IsDark : EditorGUIUtility.isProSkin;
             _theme = MD3Theme.Default ?? (_isDark ? MD3Theme.Dark() : MD3Theme.Light());
 
-            var themeSheet = MD3Theme.LoadThemeStyleSheet();
-            var compSheet = MD3Theme.LoadComponentsStyleSheet();
-            if (themeSheet != null && !rootVisualElement.styleSheets.Contains(themeSheet))
-                rootVisualElement.styleSheets.Add(themeSheet);
-            if (compSheet != null && !rootVisualElement.styleSheets.Contains(compSheet))
-                rootVisualElement.styleSheets.Add(compSheet);
+            MD3Theme.AddStyleSheetsTo(rootVisualElement);
 
             _theme.ApplyTo(rootVisualElement);
             BuildLayout();
@@ -89,7 +104,7 @@ namespace AjisaiFlow.MD3SDK.Editor
             _sidebar.Add(sideTitle);
 
             // Sidebar items
-            for (int i = 0; i < PageNames.Length; i++)
+            for (int i = 0; i < Pages.Length; i++)
             {
                 var idx = i;
                 var item = new VisualElement();
@@ -106,11 +121,11 @@ namespace AjisaiFlow.MD3SDK.Editor
                 item.style.borderBottomRightRadius = 18;
                 item.style.cursor = StyleKeyword.None;
 
-                var icon = MD3Icon.Create(PageIcons[i], 20f, _theme.OnSurfaceVariant);
+                var icon = MD3Icon.Create(Pages[i].Icon, 20f, _theme.OnSurfaceVariant);
                 icon.style.width = 24;
                 item.Add(icon);
 
-                var label = new Label(PageNames[i]);
+                var label = new Label(Pages[i].Name);
                 label.style.fontSize = 13;
                 label.style.color = _theme.OnSurface;
                 label.style.marginLeft = 8;
@@ -184,22 +199,8 @@ namespace AjisaiFlow.MD3SDK.Editor
             _contentScroll.Clear();
             _contentScroll.scrollOffset = Vector2.zero;
 
-            switch (index)
-            {
-                case 0: Build_Theme(_contentScroll); break;
-                case 1: Build_Typography(_contentScroll); break;
-                case 2: Build_Layout(_contentScroll); break;
-                case 3: Build_Buttons(_contentScroll); break;
-                case 4: Build_Inputs(_contentScroll); break;
-                case 5: Build_Selection(_contentScroll); break;
-                case 6: Build_Display(_contentScroll); break;
-                case 7: Build_Shapes(_contentScroll); break;
-                case 8: Build_Data(_contentScroll); break;
-                case 9: Build_Navigation(_contentScroll); break;
-                case 10: Build_Feedback(_contentScroll); break;
-                case 11: Build_Animation(_contentScroll); break;
-                case 12: Build_Progress(_contentScroll); break;
-            }
+            if (index >= 0 && index < Pages.Length)
+                Pages[index].Build(this, _contentScroll);
         }
 
         // ═══════════════════════════════════════════════════════
@@ -1449,7 +1450,6 @@ namespace AjisaiFlow.MD3SDK.Editor
                 MD3Shape.Hexagon, MD3Shape.Diamond, MD3Shape.Clover, MD3Shape.Flower,
                 MD3Shape.Gear, MD3Shape.Drop,
             };
-            int morphIdx = 0;
             var morphAvatar = new MD3ShapedAvatar(MD3Shape.Circle, 110f);
             var morphLabel = new Label("Circle");
             morphLabel.style.fontSize = 12;

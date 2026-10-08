@@ -40,52 +40,31 @@ namespace AjisaiFlow.MD3SDK.Editor
 
         public void ShowAt(VisualElement anchor)
         {
-            var themedRoot = FindThemedRoot(anchor);
+            var themedRoot = MD3Overlay.FindThemedRoot(anchor);
             if (themedRoot == null) themedRoot = anchor.parent ?? anchor;
 
-            AddOverlay(themedRoot);
+            AddMenu(themedRoot);
 
-            _menu.style.opacity = 0f;
-            _menu.style.scale = new Scale(new Vector3(0.95f, 0.95f, 1f));
-            themedRoot.Add(_menu);
-            (_shadowAmbient, _shadowKey) = MD3Elevation.AddSiblingShadow(themedRoot, _menu, 4f, 2);
-
-            EventCallback<GeometryChangedEvent> posCb = null;
-            var root = themedRoot;
-            posCb = e =>
+            MD3Overlay.OnNextGeometry(_menu, () =>
             {
-                _menu.UnregisterCallback(posCb);
                 var anchorWorld = anchor.worldBound;
-                var rootWorld = root.worldBound;
+                var rootWorld = themedRoot.worldBound;
                 float x = anchorWorld.xMin - rootWorld.x;
                 float y = anchorWorld.yMax - rootWorld.y + 2f;
-                ClampPosition(root, x, y);
-            };
-            _menu.RegisterCallback(posCb);
+                ClampPosition(themedRoot, x, y);
+            });
 
             AnimateOpen();
         }
 
         public void ShowAtPosition(VisualElement parent, float x, float y)
         {
-            var themedRoot = FindThemedRoot(parent);
+            var themedRoot = MD3Overlay.FindThemedRoot(parent);
             if (themedRoot == null) themedRoot = parent;
 
-            AddOverlay(themedRoot);
+            AddMenu(themedRoot);
 
-            _menu.style.opacity = 0f;
-            _menu.style.scale = new Scale(new Vector3(0.95f, 0.95f, 1f));
-            themedRoot.Add(_menu);
-            (_shadowAmbient, _shadowKey) = MD3Elevation.AddSiblingShadow(themedRoot, _menu, 4f, 2);
-
-            EventCallback<GeometryChangedEvent> posCb = null;
-            var root = themedRoot;
-            posCb = e =>
-            {
-                _menu.UnregisterCallback(posCb);
-                ClampPosition(root, x, y);
-            };
-            _menu.RegisterCallback(posCb);
+            MD3Overlay.OnNextGeometry(_menu, () => ClampPosition(themedRoot, x, y));
 
             AnimateOpen();
         }
@@ -105,17 +84,13 @@ namespace AjisaiFlow.MD3SDK.Editor
             });
         }
 
-        void AddOverlay(VisualElement themedRoot)
+        void AddMenu(VisualElement themedRoot)
         {
-            _scrim = new VisualElement();
-            _scrim.AddToClassList("md3-fab-speed-dial__scrim");
-            _scrim.style.backgroundColor = Color.clear;
-            _scrim.RegisterCallback<ClickEvent>(e =>
-            {
-                e.StopPropagation();
-                Close();
-            });
-            themedRoot.Add(_scrim);
+            _scrim = MD3Overlay.AddScrim(themedRoot, Color.clear, Close);
+            _menu.style.opacity = 0f;
+            _menu.style.scale = new Scale(new Vector3(0.95f, 0.95f, 1f));
+            themedRoot.Add(_menu);
+            (_shadowAmbient, _shadowKey) = MD3Elevation.AddSiblingShadow(themedRoot, _menu, 4f, 2);
         }
 
         void ClampPosition(VisualElement root, float x, float y)
@@ -136,19 +111,6 @@ namespace AjisaiFlow.MD3SDK.Editor
             _menuAnim?.Cancel();
             _menuAnim = MD3Animate.FadeScale(_menu, 0f, 1f, 0.95f, 1f, 100f, MD3Easing.EaseOut);
             ApplyColors();
-        }
-
-        static VisualElement FindThemedRoot(VisualElement from)
-        {
-            var el = from;
-            VisualElement themedRoot = null;
-            while (el != null)
-            {
-                if (el.ClassListContains("md3-dark") || el.ClassListContains("md3-light"))
-                    themedRoot = el;
-                el = el.parent;
-            }
-            return themedRoot;
         }
 
         public void RefreshTheme()

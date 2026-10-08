@@ -274,28 +274,33 @@ namespace AjisaiFlow.MD3SDK.Editor
         static StyleSheet _cachedThemeSheet;
         static StyleSheet _cachedComponentsSheet;
 
-        public static StyleSheet LoadThemeStyleSheet()
+        internal static void AddStyleSheetsTo(VisualElement root)
         {
-            if (_cachedThemeSheet != null) return _cachedThemeSheet;
-            var guids = AssetDatabase.FindAssets("MD3Theme t:StyleSheet");
-            foreach (var guid in guids)
-            {
-                var path = AssetDatabase.GUIDToAssetPath(guid);
-                if ((path.Contains("MD3SDK") || path.Contains("net.ajisaiflow.md3sdk")) && path.EndsWith("MD3Theme.uss"))
-                    return _cachedThemeSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(path);
-            }
-            return null;
+            AddStyleSheet(root, LoadThemeStyleSheet());
+            AddStyleSheet(root, LoadComponentsStyleSheet());
         }
 
-        public static StyleSheet LoadComponentsStyleSheet()
+        static void AddStyleSheet(VisualElement root, StyleSheet sheet)
         {
-            if (_cachedComponentsSheet != null) return _cachedComponentsSheet;
-            var guids = AssetDatabase.FindAssets("MD3Components t:StyleSheet");
+            if (sheet != null && !root.styleSheets.Contains(sheet))
+                root.styleSheets.Add(sheet);
+        }
+
+        public static StyleSheet LoadThemeStyleSheet()
+            => LoadStyleSheet("MD3Theme", ref _cachedThemeSheet);
+
+        public static StyleSheet LoadComponentsStyleSheet()
+            => LoadStyleSheet("MD3Components", ref _cachedComponentsSheet);
+
+        static StyleSheet LoadStyleSheet(string assetName, ref StyleSheet cached)
+        {
+            if (cached != null) return cached;
+            var guids = AssetDatabase.FindAssets(assetName + " t:StyleSheet");
             foreach (var guid in guids)
             {
                 var path = AssetDatabase.GUIDToAssetPath(guid);
-                if ((path.Contains("MD3SDK") || path.Contains("net.ajisaiflow.md3sdk")) && path.EndsWith("MD3Components.uss"))
-                    return _cachedComponentsSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(path);
+                if ((path.Contains("MD3SDK") || path.Contains("net.ajisaiflow.md3sdk")) && path.EndsWith(assetName + ".uss"))
+                    return cached = AssetDatabase.LoadAssetAtPath<StyleSheet>(path);
             }
             return null;
         }

@@ -107,26 +107,11 @@ namespace AjisaiFlow.MD3SDK.Editor
             if (_theme == null) _theme = ResolveTheme();
 
             // Find themed root
-            var root = this as VisualElement;
-            VisualElement themedRoot = null;
-            while (root != null)
-            {
-                if (root.ClassListContains("md3-dark") || root.ClassListContains("md3-light"))
-                    themedRoot = root;
-                root = root.parent;
-            }
+            var themedRoot = MD3Overlay.FindThemedRoot(this);
             if (themedRoot == null) themedRoot = this.parent ?? this;
 
             // Add scrim
-            _speedDialScrim = new VisualElement();
-            _speedDialScrim.AddToClassList("md3-fab-speed-dial__scrim");
-            _speedDialScrim.style.backgroundColor = new Color(0, 0, 0, 0.32f);
-            _speedDialScrim.RegisterCallback<ClickEvent>(e =>
-            {
-                e.StopPropagation();
-                CloseSpeedDial();
-            });
-            themedRoot.Add(_speedDialScrim);
+            _speedDialScrim = MD3Overlay.AddScrim(themedRoot, new Color(0, 0, 0, 0.32f), CloseSpeedDial);
 
             // Create speed dial container
             _speedDialContainer = new VisualElement();
@@ -134,17 +119,13 @@ namespace AjisaiFlow.MD3SDK.Editor
             themedRoot.Add(_speedDialContainer);
 
             // Position relative to FAB
-            EventCallback<GeometryChangedEvent> positionCb = null;
-            var posRoot = themedRoot;
-            positionCb = e =>
+            MD3Overlay.OnNextGeometry(_speedDialContainer, () =>
             {
-                _speedDialContainer.UnregisterCallback(positionCb);
                 var fabWorld = this.worldBound;
-                var rootWorld = posRoot.worldBound;
+                var rootWorld = themedRoot.worldBound;
                 _speedDialContainer.style.right = rootWorld.xMax - fabWorld.xMax;
                 _speedDialContainer.style.bottom = rootWorld.yMax - fabWorld.y + 8f;
-            };
-            _speedDialContainer.RegisterCallback(positionCb);
+            });
 
             // Create speed dial items with staggered animation
             for (int i = 0; i < _speedDialItems.Count; i++)

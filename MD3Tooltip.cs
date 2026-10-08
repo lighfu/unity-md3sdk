@@ -72,31 +72,12 @@ namespace AjisaiFlow.MD3SDK.Editor
         public void ShowAt(VisualElement anchor)
         {
             // Find the themed root (element with md3-dark/md3-light class)
-            var root = anchor;
-            VisualElement themedRoot = null;
-            while (root != null)
-            {
-                if (root.ClassListContains("md3-dark") || root.ClassListContains("md3-light"))
-                    themedRoot = root;
-                root = root.parent;
-            }
+            var themedRoot = MD3Overlay.FindThemedRoot(anchor);
             if (themedRoot == null) themedRoot = anchor.parent ?? anchor;
             themedRoot.Add(this);
 
             // Position below the anchor (one-shot geometry callback)
-            EventCallback<GeometryChangedEvent> positionCb = null;
-            var posRoot = themedRoot;
-            positionCb = e =>
-            {
-                UnregisterCallback(positionCb);
-                var anchorWorld = anchor.worldBound;
-                var rootWorld = posRoot.worldBound;
-                float left = anchorWorld.x - rootWorld.x;
-                float top = anchorWorld.yMax - rootWorld.y + 4f;
-                style.left = left;
-                style.top = top;
-            };
-            RegisterCallback(positionCb);
+            MD3Overlay.OnNextGeometry(this, () => MD3Overlay.PlaceBelow(this, anchor, themedRoot, 4f));
 
             // Animate in
             style.opacity = 0f;

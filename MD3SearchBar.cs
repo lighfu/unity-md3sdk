@@ -161,26 +161,11 @@ namespace AjisaiFlow.MD3SDK.Editor
             _dropdownOpen = true;
 
             // Find themed root
-            var root = this as VisualElement;
-            VisualElement themedRoot = null;
-            while (root != null)
-            {
-                if (root.ClassListContains("md3-dark") || root.ClassListContains("md3-light"))
-                    themedRoot = root;
-                root = root.parent;
-            }
+            var themedRoot = MD3Overlay.FindThemedRoot(this);
             if (themedRoot == null) themedRoot = this.parent ?? this;
 
             // Scrim (transparent click catcher)
-            _scrim = new VisualElement();
-            _scrim.AddToClassList("md3-fab-speed-dial__scrim");
-            _scrim.style.backgroundColor = Color.clear;
-            _scrim.RegisterCallback<ClickEvent>(e =>
-            {
-                e.StopPropagation();
-                CloseDropdown();
-            });
-            themedRoot.Add(_scrim);
+            _scrim = MD3Overlay.AddScrim(themedRoot, Color.clear, CloseDropdown);
 
             // Add dropdown
             _dropdown.style.opacity = 0f;
@@ -188,18 +173,8 @@ namespace AjisaiFlow.MD3SDK.Editor
             themedRoot.Add(_dropdown);
 
             // Position dropdown below search bar
-            EventCallback<GeometryChangedEvent> positionCb = null;
-            var posRoot = themedRoot;
-            positionCb = e =>
-            {
-                _dropdown.UnregisterCallback(positionCb);
-                var barWorld = _container.worldBound;
-                var rootWorld = posRoot.worldBound;
-                _dropdown.style.left = barWorld.x - rootWorld.x;
-                _dropdown.style.top = barWorld.yMax - rootWorld.y + 2f;
-                _dropdown.style.width = barWorld.width;
-            };
-            _dropdown.RegisterCallback(positionCb);
+            MD3Overlay.OnNextGeometry(_dropdown,
+                () => MD3Overlay.PlaceBelow(_dropdown, _container, themedRoot, matchWidth: true));
 
             // Animate in
             _dropdownAnim?.Cancel();

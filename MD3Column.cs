@@ -19,23 +19,7 @@ namespace AjisaiFlow.MD3SDK.Editor
             style.alignItems = alignItems;
             style.justifyContent = justifyContent;
 
-            if (gap > 0)
-            {
-                RegisterCallback<GeometryChangedEvent>(_ => ApplyGap(gap));
-                RegisterCallback<AttachToPanelEvent>(_ => ApplyGap(gap));
-            }
-        }
-
-        void ApplyGap(float gap)
-        {
-            float half = gap * 0.5f;
-            for (int i = 0; i < childCount; i++)
-            {
-                var child = ElementAt(i);
-                if (child.style.display == DisplayStyle.None) continue;
-                child.style.marginTop = i == 0 ? 0 : half;
-                child.style.marginBottom = i == childCount - 1 ? 0 : half;
-            }
+            MD3FlexGap.Register(this, gap);
         }
     }
 }

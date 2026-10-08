@@ -11,22 +11,10 @@ namespace AjisaiFlow.MD3SDK.Editor
         // ── Padding ──
 
         public static T Padding<T>(this T el, float all) where T : VisualElement
-        {
-            el.style.paddingTop = all;
-            el.style.paddingBottom = all;
-            el.style.paddingLeft = all;
-            el.style.paddingRight = all;
-            return el;
-        }
+            => el.Padding(all, all, all, all);
 
         public static T Padding<T>(this T el, float vertical, float horizontal) where T : VisualElement
-        {
-            el.style.paddingTop = vertical;
-            el.style.paddingBottom = vertical;
-            el.style.paddingLeft = horizontal;
-            el.style.paddingRight = horizontal;
-            return el;
-        }
+            => el.Padding(vertical, horizontal, vertical, horizontal);
 
         public static T Padding<T>(this T el, float top, float right, float bottom, float left) where T : VisualElement
         {
@@ -40,22 +28,10 @@ namespace AjisaiFlow.MD3SDK.Editor
         // ── Margin ──
 
         public static T Margin<T>(this T el, float all) where T : VisualElement
-        {
-            el.style.marginTop = all;
-            el.style.marginBottom = all;
-            el.style.marginLeft = all;
-            el.style.marginRight = all;
-            return el;
-        }
+            => el.Margin(all, all, all, all);
 
         public static T Margin<T>(this T el, float vertical, float horizontal) where T : VisualElement
-        {
-            el.style.marginTop = vertical;
-            el.style.marginBottom = vertical;
-            el.style.marginLeft = horizontal;
-            el.style.marginRight = horizontal;
-            return el;
-        }
+            => el.Margin(vertical, horizontal, vertical, horizontal);
 
         public static T Margin<T>(this T el, float top, float right, float bottom, float left) where T : VisualElement
         {
@@ -163,13 +139,6 @@ namespace AjisaiFlow.MD3SDK.Editor
         }
 
         public static T InsetAll<T>(this T el, float value = 0f) where T : VisualElement
-        {
-            el.style.position = Position.Absolute;
-            el.style.top = value;
-            el.style.right = value;
-            el.style.bottom = value;
-            el.style.left = value;
-            return el;
-        }
+            => el.Inset(value, value, value, value);
     }
 }

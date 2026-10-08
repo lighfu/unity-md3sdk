@@ -322,12 +322,7 @@ namespace AjisaiFlow.MD3SDK.Editor
 
             if (_step.ApplyMd3Theme)
             {
-                var themeSheet = MD3Theme.LoadThemeStyleSheet();
-                var compSheet = MD3Theme.LoadComponentsStyleSheet();
-                if (themeSheet != null && !root.styleSheets.Contains(themeSheet))
-                    root.styleSheets.Add(themeSheet);
-                if (compSheet != null && !root.styleSheets.Contains(compSheet))
-                    root.styleSheets.Add(compSheet);
+                MD3Theme.AddStyleSheetsTo(root);
                 (MD3Theme.Default ?? MD3Theme.Auto()).ApplyTo(root);
             }
 

@@ -13,6 +13,11 @@
 *.suo
 *.user
 
+# Local code index and verification artifacts
+.codegraph/
+.cursor/rules/codegraph.mdc
+.verification/
+
 .DS_Store
 Thumbs.db
 
