@@ -291,6 +291,55 @@ namespace AjisaiFlow.MD3SDK.Editor.Tests
             Assert.That(MD3Theme.Resolve(nested), Is.SameAs(outerTheme));
         }
 
+        [Test]
+        public void ApplyingAnOuterThemeLaterLetsAnExistingScopeInheritItsFont()
+        {
+            var root = new VisualElement();
+            var section = new VisualElement();
+            root.Add(section);
+            MD3Theme.FromSeedColor(Color.cyan, false).ApplyTo(section);
+
+            var outerFont = Font.CreateDynamicFontFromOSFont("Arial", 14);
+            _temporaryObjects.Add(outerFont);
+            var outerTheme = MD3Theme.Light().Clone();
+            outerTheme.TextFont = outerFont;
+            outerTheme.ApplyTo(root);
+
+            Assert.That(root.style.unityFontDefinition.value.font, Is.SameAs(outerFont));
+            Assert.That(section.style.unityFontDefinition.keyword, Is.EqualTo(StyleKeyword.Null));
+        }
+
+        [UnityTest]
+        public IEnumerator NestedScopesWithoutAFontInheritTheOuterCustomFont()
+        {
+            var root = ShowWindow();
+            var section = new VisualElement();
+            root.Add(section);
+            var outerFont = Font.CreateDynamicFontFromOSFont("Arial", 14);
+            _temporaryObjects.Add(outerFont);
+            var outerTheme = MD3Theme.Light().Clone();
+            outerTheme.TextFont = outerFont;
+            outerTheme.ApplyTo(root);
+            MD3Theme.FromSeedColor(Color.cyan, false).ApplyTo(section);
+
+            // Applied while detached, so nesting is only known once it is attached.
+            var button = new MD3Button("Button");
+            MD3Theme.Dark().Clone().ApplyTo(button);
+            section.Add(button);
+            yield return WaitForStyles();
+
+            Assert.That(section.style.unityFontDefinition.keyword, Is.EqualTo(StyleKeyword.Null));
+            Assert.That(button.style.unityFontDefinition.keyword, Is.EqualTo(StyleKeyword.Null));
+            Assert.That(button.resolvedStyle.unityFontDefinition.font, Is.SameAs(outerFont));
+
+            MD3FontManager.RefreshAllWindows();
+            yield return WaitForStyles();
+
+            Assert.That(root.style.unityFontDefinition.value.font, Is.SameAs(outerFont));
+            Assert.That(section.style.unityFontDefinition.keyword, Is.EqualTo(StyleKeyword.Null));
+            Assert.That(button.style.unityFontDefinition.keyword, Is.EqualTo(StyleKeyword.Null));
+        }
+
         [UnityTest]
         public IEnumerator ClearingTextFieldRadiusOverrideRestoresUSSAndFilledCorners()
         {

@@ -116,6 +116,7 @@ namespace AjisaiFlow.MD3SDK.Editor
             // Create speed dial container
             _speedDialContainer = new VisualElement();
             _speedDialContainer.AddToClassList("md3-fab-speed-dial");
+            MD3Overlay.InheritScope(_speedDialContainer, this);
             themedRoot.Add(_speedDialContainer);
 
             // Position relative to FAB

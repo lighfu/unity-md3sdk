@@ -48,6 +48,8 @@ namespace AjisaiFlow.MD3SDK.Editor
         static MD3Theme s_default;
         // Weak keys retain scopes across detach/re-attach without retaining abandoned trees.
         static readonly ConditionalWeakTable<VisualElement, MD3Theme> s_appliedThemes = new();
+        // スコープの外に置くポップアップが起点のテーマを引き継ぐための表。フォント更新の対象にはしない。
+        static readonly ConditionalWeakTable<VisualElement, MD3Theme> s_linkedThemes = new();
 
         static Font s_font;
         static FontAsset s_fontAsset;
@@ -61,7 +63,8 @@ namespace AjisaiFlow.MD3SDK.Editor
             var current = el;
             while (current != null)
             {
-                if (s_appliedThemes.TryGetValue(current, out var custom))
+                if (s_appliedThemes.TryGetValue(current, out var custom) ||
+                    s_linkedThemes.TryGetValue(current, out custom))
                     return custom;
                 if (current.ClassListContains("md3-dark") || current.ClassListContains("md3-light"))
                     return current.ClassListContains("md3-dark") ? Dark() : Light();
@@ -222,6 +225,9 @@ namespace AjisaiFlow.MD3SDK.Editor
             root.EnableInClassList("md3-theme-component", root is IMD3Themeable);
             s_appliedThemes.Remove(root);
             s_appliedThemes.Add(root, this);
+            // 入れ子かどうかはパネルに追加されるまで決まらないので、追加時にフォントを決め直す。
+            // 同じデリゲートは要素ごとに 1 回しか登録されない。
+            root.RegisterCallback(s_onScopeAttached);
 
             // Set root surface colors inline (USS custom properties can't be set from C#)
             // Components own their backgrounds (for example, text remains transparent).
@@ -229,6 +235,7 @@ namespace AjisaiFlow.MD3SDK.Editor
                 root.style.backgroundColor = Surface;
             root.style.color = OnSurface;
             ApplyTextFont(root);
+            RefreshChildFonts(root);
 
             // Refresh all MD3 components in the tree
             RefreshDescendants(root);
@@ -274,6 +281,7 @@ namespace AjisaiFlow.MD3SDK.Editor
                 return;
 
             s_appliedThemes.Remove(root);
+            root.UnregisterCallback(s_onScopeAttached);
             root.RemoveFromClassList("md3-dark");
             root.RemoveFromClassList("md3-light");
             root.RemoveFromClassList("md3-theme-component");
@@ -281,32 +289,81 @@ namespace AjisaiFlow.MD3SDK.Editor
                 root.style.backgroundColor = StyleKeyword.Null;
             root.style.color = StyleKeyword.Null;
             root.style.unityFontDefinition = StyleKeyword.Null;
+            RefreshChildFonts(root);
             RefreshDescendants(root);
         }
 
-        void ApplyTextFont(VisualElement root)
+        static readonly EventCallback<AttachToPanelEvent> s_onScopeAttached = OnScopeAttached;
+
+        static void OnScopeAttached(AttachToPanelEvent evt)
+        {
+            var root = (VisualElement)evt.currentTarget;
+            if (s_appliedThemes.TryGetValue(root, out var theme))
+                theme.ApplyTextFont(root, keepCurrentOnFailure: true);
+        }
+
+        /// <param name="keepCurrentOnFailure">
+        /// true なら SDK フォントを用意できないときに今のフォントを残す。
+        /// フォント更新の直後は TTF のインポートが終わっておらず、ここで置き換えると
+        /// 開いているウィンドウがフォールバックの無いフォントや既定フォントに落ちる。
+        /// </param>
+        void ApplyTextFont(VisualElement root, bool keepCurrentOnFailure = false)
         {
             if (TextFontAsset != null)
                 root.style.unityFontDefinition = new StyleFontDefinition(TextFontAsset);
             else if (TextFont != null)
                 root.style.unityFontDefinition = FontDefinition.FromFont(TextFont);
+            else if (HasAncestorScope(root))
+                // 入れ子のスコープはフォントを指定せず、外側のスコープのフォントを継承する
+                root.style.unityFontDefinition = StyleKeyword.Null;
             else
             {
                 var fontAsset = LoadFontAsset();
-                var font = fontAsset == null ? LoadFont() : null;
                 if (fontAsset != null)
                     root.style.unityFontDefinition = new StyleFontDefinition(fontAsset);
-                else if (font != null)
-                    root.style.unityFontDefinition = FontDefinition.FromFont(font);
-                else
-                    root.style.unityFontDefinition = StyleKeyword.Null;
+                else if (!keepCurrentOnFailure)
+                {
+                    var font = LoadFont();
+                    if (font != null)
+                        root.style.unityFontDefinition = FontDefinition.FromFont(font);
+                }
             }
+        }
+
+        static bool HasAncestorScope(VisualElement el)
+        {
+            for (var current = el.parent; current != null; current = current.parent)
+            {
+                if (s_appliedThemes.TryGetValue(current, out _) || s_linkedThemes.TryGetValue(current, out _))
+                    return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// ポップアップなど、スコープの外に置く要素に起点のテーマを引き継がせる。
+        /// インラインの色は設定しない（要素側が自分で塗る）。
+        /// </summary>
+        internal static void LinkScope(VisualElement el, MD3Theme theme)
+        {
+            s_linkedThemes.Remove(el);
+            s_linkedThemes.Add(el, theme);
         }
 
         internal static void RefreshFonts(VisualElement root)
         {
-            if (root.ClassListContains("md3-dark") || root.ClassListContains("md3-light"))
-                Resolve(root).ApplyTextFont(root);
+            if (s_appliedThemes.TryGetValue(root, out var theme))
+                theme.ApplyTextFont(root, keepCurrentOnFailure: true);
+            else if ((root.ClassListContains("md3-dark") || root.ClassListContains("md3-light")) &&
+                     !HasAncestorScope(root))
+                // ApplyTo を使わずクラスだけ付けたウィンドウのルート
+                Resolve(root).ApplyTextFont(root, keepCurrentOnFailure: true);
+            RefreshChildFonts(root);
+        }
+
+        // 外側のスコープが増減すると、内側のスコープが継承するか自分で指定するかが変わる。
+        static void RefreshChildFonts(VisualElement root)
+        {
             var children = root.hierarchy;
             for (int i = 0; i < children.childCount; i++)
                 RefreshFonts(children[i]);

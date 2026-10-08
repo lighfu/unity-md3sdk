@@ -18,7 +18,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - `MD3Text` の文字サイズと太さを USS に移し、個別のクラスで上書きできるようにした。
+  `MD3Components.uss` を読み込んでいない場合、見出しなどが既定の文字サイズ・太さで表示される。
 - テーマの再適用とフォント更新時に、子要素のテーマと明示したカスタムフォントを維持するようにした。
+- `MD3Theme.Resolve(el)` が親からではなく要素自身からテーマを探すようになった。
+- フォントを指定していない入れ子のテーマは、SDK のフォントを固定せず外側のフォントを引き継ぐようにした。
+- ポップアップ (Tooltip / Dropdown / ContextMenu / SearchBar / FAB のスピードダイヤル / DatePicker) が、
+  開いた要素のテーマとフォントを引き継ぐようにした。DatePicker は内側のスコープではなく一番外側のテーマ付き要素に表示する。
+- `IMD3Themeable` を実装したコンポーネントに `ApplyTo()` した場合、Surface の背景色と `flex-grow: 1` を付けないようにした。
+- `ApplyTo(null)` は `ArgumentNullException` を投げるようにした。
+
+### Fixed
+
+- `MD3TextField` の `BorderRadius` に `null` を指定しても Filled スタイルの角丸が四隅 4px に固定されていた問題を修正 (4/4/0/0 に戻る)。
 
 ## [0.8.6] - 2026-08-27
 

@@ -43,7 +43,7 @@ namespace AjisaiFlow.MD3SDK.Editor
             var themedRoot = MD3Overlay.FindThemedRoot(anchor);
             if (themedRoot == null) themedRoot = anchor.parent ?? anchor;
 
-            AddMenu(themedRoot);
+            AddMenu(themedRoot, anchor);
 
             MD3Overlay.OnNextGeometry(_menu, () =>
             {
@@ -62,7 +62,7 @@ namespace AjisaiFlow.MD3SDK.Editor
             var themedRoot = MD3Overlay.FindThemedRoot(parent);
             if (themedRoot == null) themedRoot = parent;
 
-            AddMenu(themedRoot);
+            AddMenu(themedRoot, parent);
 
             MD3Overlay.OnNextGeometry(_menu, () => ClampPosition(themedRoot, x, y));
 
@@ -84,8 +84,10 @@ namespace AjisaiFlow.MD3SDK.Editor
             });
         }
 
-        void AddMenu(VisualElement themedRoot)
+        void AddMenu(VisualElement themedRoot, VisualElement anchor)
         {
+            MD3Overlay.InheritScope(_menu, anchor);
+            _theme = ResolveTheme();
             _scrim = MD3Overlay.AddScrim(themedRoot, Color.clear, Close);
             _menu.style.opacity = 0f;
             _menu.style.scale = new Scale(new Vector3(0.95f, 0.95f, 1f));

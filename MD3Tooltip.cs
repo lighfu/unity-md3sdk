@@ -74,6 +74,7 @@ namespace AjisaiFlow.MD3SDK.Editor
             // Find the themed root (element with md3-dark/md3-light class)
             var themedRoot = MD3Overlay.FindThemedRoot(anchor);
             if (themedRoot == null) themedRoot = anchor.parent ?? anchor;
+            MD3Overlay.InheritScope(this, anchor);
             themedRoot.Add(this);
 
             // Position below the anchor (one-shot geometry callback)

@@ -153,6 +153,7 @@ namespace AjisaiFlow.MD3SDK.Editor
             _popup.style.borderBottomColor = _theme.OutlineVariant;
             _popup.style.borderLeftColor = _theme.OutlineVariant;
             _popup.style.borderRightColor = _theme.OutlineVariant;
+            MD3Overlay.InheritScope(_popup, this);
             root.Add(_popup);
 
             BuildCalendar();
@@ -365,16 +366,8 @@ namespace AjisaiFlow.MD3SDK.Editor
 
         VisualElement GetRootElement()
         {
-            // Walk up to find the EditorWindow's rootVisualElement (has md3-dark/md3-light class)
-            var el = this.parent;
-            while (el != null)
-            {
-                if (el.ClassListContains("md3-dark") || el.ClassListContains("md3-light"))
-                    return el;
-                el = el.parent;
-            }
-            // Fallback to panel root
-            return panel?.visualTree;
+            // Use the outermost themed root; an inner theme scope would clip the popup.
+            return MD3Overlay.FindThemedRoot(parent) ?? panel?.visualTree;
         }
 
         // ── Theme ──

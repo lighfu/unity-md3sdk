@@ -238,6 +238,10 @@ MD3Theme.ClearFrom(section);
 親のテーマを切り替えても、子要素に明示したテーマは維持されます。テーマの値を変更した後は `ApplyTo()` を呼び直してください。
 `ClearFrom()` はテーマの指定を解除します。追加した USS やクラスは残るので、形状も戻す場合は対応するクラスを外してください。
 
+テーマを適用した要素には、ウィンドウのルートと同じ `flex-grow: 1` と Surface の背景色が付きます。
+一部分にだけ適用して残りの高さまで広げたくない場合は、その要素に `flex-grow: 0` を指定してください（コンポーネントに直接適用した場合は付きません）。
+Tooltip・Dropdown・ContextMenu・DatePicker などのポップアップは、見切れないように一番外側のテーマ付き要素に表示され、開いた要素のテーマとフォントを引き継ぎます。
+
 ### 文字サイズ・角丸・余白と個別コンポーネント
 
 追加 USS で SDK のクラスを指定すると、文字サイズ・角丸・余白をまとめて変更できます。
@@ -324,7 +328,7 @@ theme.TextFont = AssetDatabase.LoadAssetAtPath<Font>("Assets/Fonts/MyFont.ttf");
 theme.ApplyTo(rootVisualElement);
 ```
 
-両方指定した場合は `TextFontAsset` が優先されます。両方 `null` の場合は SDK のフォントを使います。
+両方指定した場合は `TextFontAsset` が優先されます。両方 `null` の場合、一番外側のテーマは SDK のフォントを使い、入れ子のテーマは外側のフォントを引き継ぎます。
 フォントのダウンロードや設定変更後の更新でも、明示したカスタムフォントは維持されます。
 アイコンのフォントは `MD3Icon` が引き続き管理します。
 
@@ -431,6 +435,8 @@ Clone a shared theme before changing it. `ApplyTo(root, customStyleSheets)` inst
 Use `theme.ApplyTo(root, System.Array.Empty<StyleSheet>())` for the default sheets alone. The existing `ApplyTo(root)` only applies the theme; add the sheets first as shown in Quick Start.
 Apply a theme to a subtree or a component to give it an independent palette; hover, pressed and disabled colors follow that palette.
 Use `MD3Theme.ClearFrom(element)` to resume inheriting the parent theme. Custom USS and classes stay attached.
+A themed container gets `flex-grow: 1` and the Surface background like a window root; set `flex-grow: 0` on a partial scope that should not fill the remaining space (themes applied to components are exempt).
+Popups such as Tooltip, Dropdown, ContextMenu and DatePicker open in the outermost themed element so they are not clipped, and keep the theme and font of the element that opened them.
 
 ```csharp
 var theme = MD3Theme.Auto().Clone();
@@ -482,7 +488,7 @@ the `--my-*` names above belong to this example. Variables inherit through subtr
 Add your own class to the beginning of selectors to scope overrides, then remove that class to restore the SDK defaults.
 Style `MD3Text` labels through `.md3-text--body > .md3-text__label` or the corresponding role classes listed above.
 Inline styles take precedence over USS; set interactive colors through the theme palette.
-Set `TextFont` or `TextFontAsset` for a custom text font (`TextFontAsset` takes precedence). Leave both null for the SDK font.
+Set `TextFont` or `TextFontAsset` for a custom text font (`TextFontAsset` takes precedence). With both null, the outermost theme uses the SDK font and nested themes inherit the outer font.
 Try the **Theme → Style Customization** section in the Sample window and see [`MD3SampleStyles.uss`](MD3SampleStyles.uss).
 
 ## Fonts

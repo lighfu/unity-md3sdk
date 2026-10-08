@@ -170,6 +170,7 @@ namespace AjisaiFlow.MD3SDK.Editor
             // Add dropdown
             _dropdown.style.opacity = 0f;
             _dropdown.style.scale = new Scale(new Vector3(0.95f, 0.95f, 1f));
+            MD3Overlay.InheritScope(_dropdown, this);
             themedRoot.Add(_dropdown);
 
             // Position dropdown below search bar
